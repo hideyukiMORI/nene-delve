@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  pull_request:
+    types:
+      - ready_for_review
+      - synchronize
+      - edited
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Install Swift
+        run: eng/install-swift.sh
+      - name: check
+        run: make check

@@ -1,0 +1,6 @@
+# make check が実際に読む設定。CNF-007 が、Makefile から辿れるファイルに各行が現れることを見る。
+.swift-version
+.swiftlint.yml
+eng/module-graph.txt
+eng/dependency-allowlist.txt
+eng/tool-versions.json

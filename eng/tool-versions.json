@@ -1,0 +1,13 @@
+{
+  "swiftlint": {
+    "version": "0.65.1",
+    "url": "https://github.com/realm/SwiftLint/releases/download/0.65.1/swiftlint_linux_amd64.zip",
+    "sha256": "caeed6f4a679c35539ffaf124f6c4ab4a8416917f7d8796279dc52b74026059d",
+    "binary_in_zip": "swiftlint-static"
+  },
+  "swiftly": {
+    "version": "1.2.0",
+    "url": "https://download.swift.org/swiftly/linux/swiftly-1.2.0-x86_64.tar.gz",
+    "sha256": "0b26b568811404374c7d7f07276b6aad4145db5d1893a45f307de6a94ca8d9c3"
+  }
+}
