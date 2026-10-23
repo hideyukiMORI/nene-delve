@@ -1,0 +1,7 @@
+# 生産ターゲットの依存。eng/conformance.py が Package.swift と突き合わせる（ARC-002）。
+# 行の形: <target>: <dep> <dep>
+# 依存を持たないターゲットはコロンの後ろを空にする。
+NeNeDelveCore:
+NeNeDelveRender: NeNeDelveCore
+NeNeDelveTerminal: NeNeDelveRender
+nene-delve: NeNeDelveCore NeNeDelveRender NeNeDelveTerminal

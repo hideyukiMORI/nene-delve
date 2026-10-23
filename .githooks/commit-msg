@@ -1,0 +1,4 @@
+#!/bin/sh
+# GIT-003。CI も eng/commit_message.py を呼ぶ。
+set -eu
+exec python3 eng/commit_message.py --file "$1"

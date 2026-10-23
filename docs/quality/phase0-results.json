@@ -1,0 +1,501 @@
+{
+  "measured_on": "2026-10-23",
+  "environment": {
+    "os": "Ubuntu, glibc 2.35 (ldd (Ubuntu GLIBC 2.35-0ubuntu3.15) 2.35)",
+    "swift": "Swift version 6.4.1 (swift-6.4.1-RELEASE)",
+    "target": "x86_64-unknown-linux-gnu",
+    "swift_format": "6.4.1",
+    "swiftlint": "0.65.1 static binary from swiftlint_linux_amd64.zip",
+    "swiftlint_sha256": "caeed6f4a679c35539ffaf124f6c4ab4a8416917f7d8796279dc52b74026059d"
+  },
+  "invalid_first_passes_not_cited": [
+    "import を書き忘れた他モジュールのクライアントは cannot find type であり、可視性の測定ではない。",
+    "SystemRandomNumberGenerator().next() を一時値に呼んだ失敗は mutating の error であり、API が無いという意味ではない。",
+    "Task 捕獲が通ったことは、Swift 6 の並行検査が無効であるという意味ではない。"
+  ],
+  "cases": [
+    {
+      "name": "m1-missing-case",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m1-missing-case/main.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m1-missing-case/main.swift:3:5: error: switch must be exhaustive\n    switch kind {\n    ^\n/tmp/nene-phase0/cases/m1-missing-case/main.swift:3:5: note: add missing case: '.grid'\n    switch kind {\n    ^",
+      "note": "同一ファイル。ケース漏れは error。"
+    },
+    {
+      "name": "m1-plain-default",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m1-plain-default/main.swift",
+      "excerpt": "",
+      "note": "default があると -warnings-as-errors でも診断無し。"
+    },
+    {
+      "name": "m1-unknown-default-missing-werror",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m1-unknown-default-missing-werror/main.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m1-unknown-default-missing-werror/main.swift:3:5: warning: switch must be exhaustive\n    switch kind {\n    ^\n/tmp/nene-phase0/cases/m1-unknown-default-missing-werror/main.swift:3:5: note: add missing case: '.grid'\n    switch kind {\n    ^",
+      "note": "@unknown default の既知ケース漏れは warning のまま。-warnings-as-errors がエラーにしない。"
+    },
+    {
+      "name": "m1-unknown-default-full",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m1-unknown-default-full/main.swift",
+      "excerpt": "",
+      "note": "両ケースを書いた @unknown default は診断無し。"
+    },
+    {
+      "name": "m1-case-wildcard",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m1-case-wildcard/main.swift",
+      "excerpt": "",
+      "note": "case _ は -warnings-as-errors でも診断無し。"
+    },
+    {
+      "name": "m1-if-case-not-exhaustive",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m1-if-case-not-exhaustive/main.swift",
+      "excerpt": "",
+      "note": "if case は網羅を要求しない。"
+    },
+    {
+      "name": "m2-public-let",
+      "exit": 1,
+      "command": "swiftc -typecheck -swift-version 6 -diagnostic-style llvm /tmp/nene-phase0/cases/m2-public-let/A.swift /tmp/nene-phase0/cases/m2-public-let/B.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m2-public-let/B.swift:1:39: error: cannot assign to property: 'column' is a 'let' constant\nfunc probe(_ wall: inout Wall) { wall.column = 2 }\n                                 ~~~~~^~~~~~\n/tmp/nene-phase0/cases/m2-public-let/A.swift:2:12: note: change 'let' to 'var' to make it mutable\n    public let column: Int\n           ^~~\n           var",
+      "note": "let への代入は error。"
+    },
+    {
+      "name": "m2-public-var",
+      "exit": 0,
+      "command": "swiftc -typecheck -swift-version 6 -diagnostic-style llvm /tmp/nene-phase0/cases/m2-public-var/A.swift /tmp/nene-phase0/cases/m2-public-var/B.swift",
+      "excerpt": "",
+      "note": "public var への代入は通る。"
+    },
+    {
+      "name": "m2-private-set",
+      "exit": 1,
+      "command": "swiftc -typecheck -swift-version 6 -diagnostic-style llvm /tmp/nene-phase0/cases/m2-private-set/A.swift /tmp/nene-phase0/cases/m2-private-set/B.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m2-private-set/B.swift:1:39: error: cannot assign to property: 'column' setter is inaccessible\nfunc probe(_ wall: inout Wall) { wall.column = 2 }\n                                 ~~~~~^~~~~~",
+      "note": "他ファイルからの private(set) 代入は error。"
+    },
+    {
+      "name": "m2-returned-array",
+      "exit": 0,
+      "command": "swiftc -typecheck -swift-version 6 -diagnostic-style llvm /tmp/nene-phase0/cases/m2-returned-array/A.swift /tmp/nene-phase0/cases/m2-returned-array/B.swift",
+      "excerpt": "",
+      "note": "返した Array への append はコンパイルできる。元の個数は見ていない。"
+    },
+    {
+      "name": "m2-class-public-var",
+      "exit": 0,
+      "command": "swiftc -typecheck -swift-version 6 -diagnostic-style llvm /tmp/nene-phase0/cases/m2-class-public-var/A.swift /tmp/nene-phase0/cases/m2-class-public-var/B.swift",
+      "excerpt": "",
+      "note": "class の public var への代入は通る。"
+    },
+    {
+      "name": "m3-uninitialized",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m3-uninitialized/main.swift",
+      "excerpt": "",
+      "note": "-typecheck では未初期化 let の診断が出ない。"
+    },
+    {
+      "name": "m3-nil-to-int",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m3-nil-to-int/main.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m3-nil-to-int/main.swift:1:23: error: 'nil' is incompatible with return type 'Int'\nfunc probe() -> Int { nil }\n                      ^",
+      "note": "非 Optional への nil は error。"
+    },
+    {
+      "name": "m3-nil-to-optional",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m3-nil-to-optional/main.swift",
+      "excerpt": "",
+      "note": "Int? への nil は通る。"
+    },
+    {
+      "name": "m3-iuo",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m3-iuo/main.swift",
+      "excerpt": "",
+      "note": "IUO は -warnings-as-errors でも通る。"
+    },
+    {
+      "name": "m3-force-unwrap",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m3-force-unwrap/main.swift",
+      "excerpt": "",
+      "note": "強制アンラップは -warnings-as-errors でも通る。"
+    },
+    {
+      "name": "m3-memberwise-zero",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m3-memberwise-zero/main.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m3-memberwise-zero/main.swift:2:29: error: missing argument for parameter 'column' in call\nfunc probe() -> Wall { Wall() }\n                            ^\n                            column: <#Int#>\n/tmp/nene-phase0/cases/m3-memberwise-zero/main.swift:1:15: note: 'init(column:)' declared here\npublic struct Wall { public var column: Int }\n              ^",
+      "note": "引数不足の memberwise は error。"
+    },
+    {
+      "name": "m3-empty-struct-zero",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m3-empty-struct-zero/main.swift",
+      "excerpt": "",
+      "note": "空 struct の Marker() は通る。"
+    },
+    {
+      "name": "m4-private-init-other-file",
+      "exit": 1,
+      "command": "swiftc -typecheck -swift-version 6 -diagnostic-style llvm /tmp/nene-phase0/cases/m4-private-init-other-file/A.swift /tmp/nene-phase0/cases/m4-private-init-other-file/B.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m4-private-init-other-file/B.swift:1:24: error: 'Seed' initializer is inaccessible due to 'private' protection level\nfunc probe() -> Seed { Seed(raw: 1) }\n                       ^\n/tmp/nene-phase0/cases/m4-private-init-other-file/A.swift:3:13: note: 'init(raw:)' declared here\n    private init(raw: UInt64) { self.raw = raw }\n            ^",
+      "note": "同一モジュールの他ファイルから private init は不可。"
+    },
+    {
+      "name": "m4-memberwise-other-file",
+      "exit": 0,
+      "command": "swiftc -typecheck -swift-version 6 -diagnostic-style llvm /tmp/nene-phase0/cases/m4-memberwise-other-file/A.swift /tmp/nene-phase0/cases/m4-memberwise-other-file/B.swift",
+      "excerpt": "",
+      "note": "明示 init が無い public struct の memberwise は同一モジュールの他ファイルから呼べる。"
+    },
+    {
+      "name": "m4-unsafe-bitcast",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m4-unsafe-bitcast/main.swift",
+      "excerpt": "",
+      "note": "unsafeBitCast は private init を迂回する。診断無し。"
+    },
+    {
+      "name": "m5-import-foundation",
+      "exit": 0,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\n[Planning deferred tasks]\nBuild complete! (0.65 secs)",
+      "note": "依存宣言の無いターゲットで import Foundation と Date() が通る。"
+    },
+    {
+      "name": "m5-date-without-import",
+      "exit": 1,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\nerror: SwiftCompile normal x86_64 /tmp/nene-phase0/cases/pkg/Sources/Core/Core.swift failed with a nonzero exit code. Command line:     cd /tmp/nene-phase0/cases\n    builtin-SwiftPerFileCompile Core.swift\n/tmp/nene-phase0/cases/pkg/Sources/Core/Core.swift:1:33: error: cannot find 'Date' in scope\n1 | public func probe() -> Double { Date().timeIntervalSince1970 }\n  |                                 `- error: cannot find 'Date' in scope\n2 | \nerror: Build failed",
+      "note": "import 無しの Date() は error。"
+    },
+    {
+      "name": "m5-random",
+      "exit": 0,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\nBuild complete! (0.65 secs)",
+      "note": "Int.random は標準ライブラリだけで通る。"
+    },
+    {
+      "name": "m5-system-random",
+      "exit": 1,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\nerror: SwiftCompile normal x86_64 /tmp/nene-phase0/cases/pkg/Sources/Core/Core.swift failed with a nonzero exit code. Command line:     cd /tmp/nene-phase0/cases\n    builtin-SwiftPerFileCompile Core.swift\n/tmp/nene-phase0/cases/pkg/Sources/Core/Core.swift:1:63: error: cannot use mutating member on immutable value: function call returns immutable value\n1 | public func probe() -> UInt64 { SystemRandomNumberGenerator().next() }\n  |                                                               `- error: cannot use mutating member on immutable value: function call returns immutable value\n2 | \nerror: Build failed",
+      "note": "一時値への next() は mutating の error。API 欠如ではない。"
+    },
+    {
+      "name": "m5-continuous-clock",
+      "exit": 0,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\nBuild complete! (0.57 secs)",
+      "note": "ContinuousClock は標準ライブラリだけで通る。"
+    },
+    {
+      "name": "m5-suspending-clock",
+      "exit": 0,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\nBuild complete! (0.56 secs)",
+      "note": "SuspendingClock は標準ライブラリだけで通る。"
+    },
+    {
+      "name": "m5-import-glibc",
+      "exit": 0,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\nBuild complete! (0.60 secs)",
+      "note": "import Glibc と time は依存宣言無しで通る。"
+    },
+    {
+      "name": "m5-import-dispatch",
+      "exit": 0,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\nBuild complete! (0.54 secs)",
+      "note": "import Dispatch は依存宣言無しで通る。"
+    },
+    {
+      "name": "m6-cycle",
+      "exit": 1,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg -Xswiftc -warnings-as-errors",
+      "excerpt": "error: 'pkg': cyclic dependency declaration found: Core -> Render -> Core",
+      "note": "Package.swift の相互依存は cyclic dependency declaration。"
+    },
+    {
+      "name": "m6-import-render",
+      "exit": 1,
+      "command": "swift build --package-path /tmp/nene-phase0/cases/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "error: SwiftCompile normal x86_64 failed with a nonzero exit code. Command line:     cd /tmp/nene-phase0/cases\n    \n/tmp/nene-phase0/cases/pkg/Sources/Core/Core.swift:1:8: error: circular dependency between modules 'Core' and 'Render'\n1 | import Render\n  |        `- error: circular dependency between modules 'Core' and 'Render'\n2 | public func probe() -> Int { 1 }\n3 | \nerror: SwiftCompile normal x86_64 /tmp/nene-phase0/cases/pkg/Sources/Core/Core.swift failed with a nonzero exit code. Command line:     cd /tmp/nene-phase0/cases\n    builtin-SwiftPerFileCompile Core.swift\n/tmp/nene-phase0/cases/pkg/Sources/Core/Core.swift:1:8: error: circular dependency between modules 'Core' and 'Render'\n1 | import Render\n  |        `- error: circular dependency between modules 'Core' and 'Render'",
+      "note": "依存辺と逆の import は circular dependency。未宣言ターゲットの証明には使わない。"
+    },
+    {
+      "name": "m7-unused-warning",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m7-unused-warning/main.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m7-unused-warning/main.swift:2:9: warning: initialization of immutable value 'unused' was never used; consider replacing with assignment to '_' or removing it [#NoUsage]\n    let unused = 1\n    ~~~~^~~~~~\n    _",
+      "note": "未使用 let は warning、終了コード 0。"
+    },
+    {
+      "name": "m7-unused-werror",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m7-unused-werror/main.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m7-unused-werror/main.swift:2:9: error: initialization of immutable value 'unused' was never used; consider replacing with assignment to '_' or removing it [#NoUsage]\n    let unused = 1\n    ~~~~^~~~~~\n    _",
+      "note": "-warnings-as-errors は未使用 let を error にする。"
+    },
+    {
+      "name": "m7-pragma",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -typecheck -diagnostic-style llvm /tmp/nene-phase0/cases/m7-pragma/main.swift",
+      "excerpt": "/tmp/nene-phase0/cases/m7-pragma/main.swift:1:8: error: consecutive statements on a line must be separated by ';'\n#pragma warning(disable: 1)\n       ^\n       ;\n/tmp/nene-phase0/cases/m7-pragma/main.swift:1:2: error: no macro named 'pragma'\n#pragma warning(disable: 1)\n ^~~~~~\n/tmp/nene-phase0/cases/m7-pragma/main.swift:1:9: error: expansion of macro 'warning' requires leading '#'\n#pragma warning(disable: 1)\n        ^\n        #\n/tmp/nene-phase0/cases/m7-pragma/main.swift:1:16: error: extraneous argument label 'disable:' in call",
+      "note": "#pragma warning は抑制にならない。構文エラー。"
+    },
+    {
+      "name": "m7-format-bad",
+      "exit": 1,
+      "command": "swift-format lint --strict /tmp/nene-phase0/cases/format/Bad.swift",
+      "excerpt": "/tmp/nene-phase0/cases/format/Bad.swift:1:18: error: [Spacing] add 1 space\n/tmp/nene-phase0/cases/format/Bad.swift:1:19: error: [Spacing] add 1 space\n/tmp/nene-phase0/cases/format/Bad.swift:1:36: error: [Spacing] add 1 space\n/tmp/nene-phase0/cases/format/Bad.swift:1:39: error: [Spacing] add 1 space",
+      "note": "swift-format lint --strict は spacing を error にする。"
+    },
+    {
+      "name": "m7-format-bad-nostrict",
+      "exit": 0,
+      "command": "swift-format lint /tmp/nene-phase0/cases/format/Bad.swift",
+      "excerpt": "/tmp/nene-phase0/cases/format/Bad.swift:1:18: warning: [Spacing] add 1 space\n/tmp/nene-phase0/cases/format/Bad.swift:1:19: warning: [Spacing] add 1 space\n/tmp/nene-phase0/cases/format/Bad.swift:1:36: warning: [Spacing] add 1 space\n/tmp/nene-phase0/cases/format/Bad.swift:1:39: warning: [Spacing] add 1 space",
+      "note": "--strict が無いと warning のまま終了コード 0。"
+    },
+    {
+      "name": "m7-format-ignore",
+      "exit": 0,
+      "command": "swift-format lint --strict /tmp/nene-phase0/cases/format/Ignored.swift",
+      "excerpt": "",
+      "note": "swift-format-ignore は --strict でも診断を消す。"
+    },
+    {
+      "name": "m7-format-ignore-file",
+      "exit": 0,
+      "command": "swift-format lint --strict /tmp/nene-phase0/cases/format/IgnoreFile.swift",
+      "excerpt": "",
+      "note": "swift-format-ignore-file は --strict でも診断を消す。"
+    },
+    {
+      "name": "m7-lint-force",
+      "exit": 2,
+      "command": "/tmp/tools/swiftlint-static-bin lint --strict --config /tmp/nene-phase0/cases/swiftlint/.swiftlint.yml /tmp/nene-phase0/cases/swiftlint/Force.swift",
+      "excerpt": "Linting Swift files at paths /tmp/nene-phase0/cases/swiftlint/Force.swift\nLinting 'Force.swift' (1/1)\n/tmp/nene-phase0/cases/swiftlint/Force.swift:2:10: error: Force Unwrapping Violation: Force unwrapping should be avoided (force_unwrapping)\nDone linting! Found 1 violation, 1 serious in 1 file.",
+      "note": "force_unwrapping は SwiftLint --strict で error。"
+    },
+    {
+      "name": "m7-lint-disable-next",
+      "exit": 0,
+      "command": "/tmp/tools/swiftlint-static-bin lint --strict --config /tmp/nene-phase0/cases/swiftlint/.swiftlint.yml /tmp/nene-phase0/cases/swiftlint/Disabled.swift",
+      "excerpt": "Linting Swift files at paths /tmp/nene-phase0/cases/swiftlint/Disabled.swift\nLinting 'Disabled.swift' (1/1)\nDone linting! Found 0 violations, 0 serious in 1 file.",
+      "note": "swiftlint:disable:next は理由無しで効く。"
+    },
+    {
+      "name": "m7-lint-disable-file",
+      "exit": 0,
+      "command": "/tmp/tools/swiftlint-static-bin lint --strict --config /tmp/nene-phase0/cases/swiftlint/.swiftlint.yml /tmp/nene-phase0/cases/swiftlint/FileDisabled.swift",
+      "excerpt": "Linting Swift files at paths /tmp/nene-phase0/cases/swiftlint/FileDisabled.swift\nLinting 'FileDisabled.swift' (1/1)\nDone linting! Found 0 violations, 0 serious in 1 file.",
+      "note": "ファイル全体の swiftlint:disable は理由無しで効く。"
+    },
+    {
+      "name": "m7-lint-rotten",
+      "exit": 2,
+      "command": "/tmp/tools/swiftlint-static-bin lint --strict --config /tmp/nene-phase0/cases/swiftlint/.swiftlint.yml /tmp/nene-phase0/cases/swiftlint/Rotten.swift",
+      "excerpt": "Linting Swift files at paths /tmp/nene-phase0/cases/swiftlint/Rotten.swift\nLinting 'Rotten.swift' (1/1)\n/tmp/nene-phase0/cases/swiftlint/Rotten.swift:2:1: error: Superfluous Disable Command Violation: SwiftLint rule 'force_unwrapping' did not trigger a violation in the disabled region; remove the disable command (superfluous_disable_command)\nDone linting! Found 1 violation, 1 serious in 1 file.",
+      "note": "腐った disable は superfluous_disable_command が落とす。"
+    },
+    {
+      "name": "m7-lint-complex",
+      "exit": 2,
+      "command": "/tmp/tools/swiftlint-static-bin lint --strict --config /tmp/nene-phase0/cases/swiftlint/.swiftlint.yml /tmp/nene-phase0/cases/swiftlint/Complex.swift",
+      "excerpt": "Linting Swift files at paths /tmp/nene-phase0/cases/swiftlint/Complex.swift\nLinting 'Complex.swift' (1/1)\n/tmp/nene-phase0/cases/swiftlint/Complex.swift:1:1: error: Cyclomatic Complexity Violation: Function should have complexity 10 or less; currently complexity is 11 (cyclomatic_complexity)\nDone linting! Found 1 violation, 1 serious in 1 file.",
+      "note": "if が 11 個の関数は cyclomatic complexity 11 で error。"
+    },
+    {
+      "name": "pkg-resolve",
+      "exit": 0,
+      "command": "swift package --package-path /tmp/nene-phase0/cases/pkg resolve",
+      "excerpt": "",
+      "note": "実行時依存 0 の swift package resolve は成功する。"
+    },
+    {
+      "name": "pkg-resolved-exists",
+      "exit": 1,
+      "command": "test -f /tmp/nene-phase0/cases/pkg/Package.resolved",
+      "excerpt": "absent",
+      "note": "そのとき Package.resolved は生成されない。"
+    },
+    {
+      "name": "pkg-test-both",
+      "exit": 0,
+      "command": "swift test --package-path /tmp/nene-phase0/cases/pkg -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\n[Pre-planning 1 / 124]\n[Constructing 247 / 264]\nBuild complete! (5.47 secs)\nTest Suite 'All tests' started at 2026-10-23 22:59:48.643\nTest Suite 'Debug-linux-x86_64.xctest' started at 2026-10-23 22:59:48.644\nTest Suite 'CoreTests' started at 2026-10-23 22:59:48.644\nTest Case 'CoreTests.testMarker' started at 2026-10-23 22:59:48.644\nTest Case 'CoreTests.testMarker' passed (0.001 seconds)\nTest Suite 'CoreTests' passed at 2026-10-23 22:59:48.645\n\t Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds\nTest Suite 'Debug-linux-x86_64.xctest' passed at 2026-10-23 22:59:48.645",
+      "note": "1 回の swift test が XCTest と Swift Testing の両方を実行する。"
+    },
+    {
+      "name": "pkg-test-swift-testing",
+      "exit": 0,
+      "command": "swift test --package-path /tmp/nene-phase0/cases/pkg -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\n[Pre-planning 1 / 124]\n[Constructing 28 / 264]\nBuild complete! (1.17 secs)\nTest Suite 'All tests' started at 2026-10-23 22:59:50.551\nTest Suite 'Debug-linux-x86_64.xctest' started at 2026-10-23 22:59:50.552\nTest Suite 'Debug-linux-x86_64.xctest' passed at 2026-10-23 22:59:50.552\n\t Executed 0 tests, with 0 failures (0 unexpected) in 0.0 (0.0) seconds\nTest Suite 'All tests' passed at 2026-10-23 22:59:50.552\n\t Executed 0 tests, with 0 failures (0 unexpected) in 0.0 (0.0) seconds\n◇ Test run started.\n↳ Testing Library Version: 6.4.1 (804dc4530ef3666)",
+      "note": "Swift Testing だけのパッケージでも XCTest ランナーが先に 0 件で通る。"
+    },
+    {
+      "name": "compiler-relevant-flags",
+      "exit": 0,
+      "command": "swiftc --help",
+      "excerpt": "-suppress-warnings      Suppress all warnings\n  -warnings-as-errors     Treat warnings as errors",
+      "note": "swiftc --help に -suppress-warnings と -warnings-as-errors がある。"
+    },
+    {
+      "name": "m5-system-random-var",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck /tmp/nene-phase0-b/rand.swift",
+      "excerpt": "",
+      "note": "var に受ければ SystemRandomNumberGenerator.next は通る。"
+    },
+    {
+      "name": "m4-import-private",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -typecheck -I /tmp/nene-phase0-b/mod /tmp/nene-phase0-b/mod/use-private.swift",
+      "excerpt": "/tmp/nene-phase0-b/mod/use-private.swift:2:24: error: 'Seed' initializer is inaccessible due to 'private' protection level\n1 | import Seed\n2 | func probe() -> Seed { Seed(raw: 1) }\n  |                        `- error: 'Seed' initializer is inaccessible due to 'private' protection level\n3 | \n\nSeed.Seed.init:2:9: note: 'init(raw:)' declared here\n1 | struct Seed {\n2 | private init(raw: UInt64)}\n  |         `- note: 'init(raw:)' declared here\n3 |",
+      "note": "import した他モジュールから private init は不可。"
+    },
+    {
+      "name": "m4-import-memberwise",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -typecheck -I /tmp/nene-phase0-b/mod /tmp/nene-phase0-b/mod/use-open.swift",
+      "excerpt": "/tmp/nene-phase0-b/mod/use-open.swift:2:28: error: 'OpenSeed' initializer is inaccessible due to 'internal' protection level\n1 | import Seed\n2 | func probe() -> OpenSeed { OpenSeed(raw: 1) }\n  |                            `- error: 'OpenSeed' initializer is inaccessible due to 'internal' protection level\n3 | \n\nSeed.OpenSeed.init:2:10: note: 'init(raw:)' declared here\n1 | struct OpenSeed {\n2 | internal init(raw: UInt64)}\n  |          `- note: 'init(raw:)' declared here\n3 |",
+      "note": "public struct の合成 memberwise は internal。他モジュールからは不可。"
+    },
+    {
+      "name": "m4-import-public-init",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -typecheck -I /tmp/nene-phase0-b/mod /tmp/nene-phase0-b/mod/use-public.swift",
+      "excerpt": "",
+      "note": "public init は他モジュールから呼べる。"
+    },
+    {
+      "name": "m6-no-such-module",
+      "exit": 1,
+      "command": "swift build --package-path /tmp/nene-phase0-b/pkg --target Core -Xswiftc -warnings-as-errors",
+      "excerpt": "Building for debugging...\n[Planning deferred tasks]\nerror: SwiftCompile normal x86_64 failed with a nonzero exit code. Command line:     cd /tmp/nene-phase0-b\n    \n/tmp/nene-phase0-b/pkg/Sources/Core/Core.swift:1:8: error: no such module 'Side'\n1 | import Side\n  |        `- error: no such module 'Side'\n2 | public func probe() -> Int { 1 }\n3 | \n…\noindex/probe.build/Debug-linux-x86_64/Core-t.build/Objects-normal/x86_64/Modules/Core.swiftsourceinfo -emit-objc-header-path /tmp/nene-phase0-b/pkg/.build/out/Intermediates.noindex/probe.build/Debug-linux-x86_64/Core-t.build/Objects-normal/x86_64/Core-Swift.h -serialize-diagnostics-path /tmp/nene-phase0-b/pkg/.build/out/Intermediates.noindex/probe.build/Debug-linux-x86_64/Core-t.build/Objects-normal/x86_64/Core-primary-emit-module.dia -emit-dependencies-path /tmp/nene-phase0-b/pkg/.build/out/Intermediates.noindex/probe.build/Debug-linux-x86_64/Core-t.build/Objects-normal/x86_64/Core-primary-emit-module.d -parse-as-library -o /tmp/nene-phase0-b/pkg/.build/out/Intermediates.noindex/probe.build/Debug-linux-x86_64/Core-t.build/Objects-normal/x86_64/Modules/Core.swiftmodule\nerror: Build failed",
+      "note": "依存していないターゲットの import は no such module。"
+    },
+    {
+      "name": "evo-missing.swift",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -enable-library-evolution -warnings-as-errors -typecheck -I /tmp/nene-phase0-b/evo /tmp/nene-phase0-b/evo/missing.swift",
+      "excerpt": "/tmp/nene-phase0-b/evo/missing.swift:3:5: error: switch must be exhaustive\n1 | import Kind\n2 | func probe(_ kind: MazeKind) {\n3 |     switch kind {\n  |     |- error: switch must be exhaustive\n  |     |- note: add missing case: '.grid'\n  |     |- note: handle unknown values using \"@unknown default\"\n  |     `- note: add missing cases\n4 |     case .rooms: break\n5 |     }",
+      "note": "library evolution 越しでもケース漏れは error。"
+    },
+    {
+      "name": "evo-plain.swift",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -enable-library-evolution -warnings-as-errors -typecheck -I /tmp/nene-phase0-b/evo /tmp/nene-phase0-b/evo/plain.swift",
+      "excerpt": "",
+      "note": "library evolution 越しの default は診断無し。"
+    },
+    {
+      "name": "evo-unknown.swift",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -enable-library-evolution -warnings-as-errors -typecheck -I /tmp/nene-phase0-b/evo /tmp/nene-phase0-b/evo/unknown.swift",
+      "excerpt": "",
+      "note": "両ケースを覆う @unknown default は診断無し。"
+    },
+    {
+      "name": "evo-unknown-missing.swift",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -enable-library-evolution -warnings-as-errors -typecheck -I /tmp/nene-phase0-b/evo /tmp/nene-phase0-b/evo/unknown-missing.swift",
+      "excerpt": "/tmp/nene-phase0-b/evo/unknown-missing.swift:3:5: warning: switch must be exhaustive\n1 | import Kind\n2 | func probe(_ kind: MazeKind) {\n3 |     switch kind {\n  |     |- warning: switch must be exhaustive\n  |     `- note: add missing case: '.grid'\n4 |     case .rooms: break\n5 |     @unknown default: break",
+      "note": "library evolution 越しの @unknown default の既知ケース漏れは warning のまま。"
+    },
+    {
+      "name": "frozen-missing",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck -I /tmp/nene-phase0-b/frozen /tmp/nene-phase0-b/frozen/missing.swift",
+      "excerpt": "/tmp/nene-phase0-b/frozen/missing.swift:3:5: error: switch must be exhaustive\n1 | import Kind\n2 | func probe(_ kind: MazeKind) {\n3 |     switch kind {\n  |     |- error: switch must be exhaustive\n  |     `- note: add missing case: '.grid'\n4 |     case .rooms: break\n5 |     }",
+      "note": "frozen 相当の他モジュールでもケース漏れは error。"
+    },
+    {
+      "name": "swift6-any",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck /tmp/nene-phase0-b/any.swift",
+      "excerpt": "",
+      "note": "protocol を any 無しで使うのは Swift 6.4.1 の既定では error にならない。"
+    },
+    {
+      "name": "m3-class-uninit",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -typecheck /tmp/nene-phase0-b/class.swift",
+      "excerpt": "/tmp/nene-phase0-b/class.swift:1:13: error: class 'Box' has no initializers\n1 | final class Box { var value: Int }\n  |             |         `- note: stored property 'value' without initial value prevents synthesized initializers\n  |             `- error: class 'Box' has no initializers\n2 |",
+      "note": "初期化子の無い class は error。"
+    },
+    {
+      "name": "suppress-warnings",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -suppress-warnings -warnings-as-errors -typecheck /tmp/nene-phase0-b/unused.swift",
+      "excerpt": "error: conflicting options '-warnings-as-errors' and '-suppress-warnings'",
+      "note": "-suppress-warnings と -warnings-as-errors は同時に指定すると衝突する。"
+    },
+    {
+      "name": "m3-uninitialized-compile",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -c -diagnostic-style llvm uninit.swift",
+      "excerpt": "uninit.swift:1:46: error: constant 'value' used before being initialized\nfunc probe() -> Int { let value: Int; return value }",
+      "note": "2026-10-23 の再実測。-typecheck では exit 0 だった同じソースを -c すると error。"
+    },
+    {
+      "name": "m7-suppress-hides-unused",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -suppress-warnings -typecheck unused.swift",
+      "excerpt": "",
+      "note": "2026-10-23 の再実測。-suppress-warnings は未使用 let の warning を隠して exit 0。"
+    },
+    {
+      "name": "existential-any",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -enable-upcoming-feature ExistentialAny -typecheck any.swift",
+      "excerpt": "any.swift:2:21: error: use of protocol 'P' as a type must be written 'any P'; this will be an error in a future Swift language mode [#ExistentialAny]",
+      "note": "同じファイルを upcoming feature 無しで -warnings-as-errors すると exit 0。"
+    },
+    {
+      "name": "sendable-capture",
+      "exit": 1,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -c send.swift",
+      "excerpt": "send.swift:4:42: error: capture of 'box' with non-Sendable type 'Box' in a '@Sendable' closure [#SendableClosureCaptures]",
+      "note": "明示的な @Sendable クロージャの捕獲は Swift 6 の既定で error。"
+    },
+    {
+      "name": "task-capture",
+      "exit": 0,
+      "command": "swiftc -swift-version 6 -warnings-as-errors -c task.swift",
+      "excerpt": "",
+      "note": "Task { _ = box } のあとに box を使う形は診断無し。Swift 6 がオフである証拠には使わない。"
+    },
+    {
+      "name": "swiftlint-dynamic",
+      "exit": 1,
+      "command": "swiftlint version  # dynamic binary from the 0.65.1 linux zip",
+      "excerpt": "swiftlint: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.38' not found (required by swiftlint)\nswiftlint: /lib/x86_64-linux-gnu/libstdc++.so.6: version `GLIBCXX_3.4.32' not found (required by swiftlint)\nswiftlint: /lib/x86_64-linux-gnu/libm.so.6: version `GLIBC_2.38' not found (required by swiftlint)",
+      "note": "2026-10-23 の再実測。同じ zip の swiftlint-static は version が 0.65.1 で exit 0。"
+    },
+    {
+      "name": "swift-test-no-target",
+      "exit": 1,
+      "command": "swift test -Xswiftc -warnings-as-errors",
+      "excerpt": "error: no tests found; create a target in the 'Tests' directory",
+      "note": "このリポジトリの Package.swift（テストターゲット無し）で 2026-10-23 に実行。"
+    },
+    {
+      "name": "swift-build-scaffold",
+      "exit": 0,
+      "command": "swift build -Xswiftc -warnings-as-errors",
+      "excerpt": "Build complete!",
+      "note": "マーカーと空の main だけのパッケージ。2026-10-23。"
+    }
+  ]
+}

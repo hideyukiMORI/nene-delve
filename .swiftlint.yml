@@ -1,0 +1,45 @@
+# 有効にする規則だけを名指しする。disabled_rules は使わない（CNF-005）。
+# 閾値の根拠は docs/CODING_RULES.md の SWF-004 / SWF-012 / SWF-015。
+only_rules:
+  - cyclomatic_complexity
+  - function_body_length
+  - function_parameter_count
+  - nesting
+  - superfluous_disable_command
+  - force_unwrapping
+  - force_cast
+  - force_try
+  - implicitly_unwrapped_optional
+
+cyclomatic_complexity:
+  # 網羅 switch の case は選択肢の列挙であり、分岐の複雑さには数えない。
+  ignores_case_statements: true
+  warning: 10
+  error: 10
+
+function_body_length:
+  warning: 40
+  error: 40
+
+function_parameter_count:
+  warning: 4
+  error: 4
+
+nesting:
+  type_level:
+    warning: 3
+    error: 3
+  function_level:
+    warning: 3
+    error: 3
+
+force_unwrapping:
+  severity: error
+force_cast:
+  severity: error
+force_try:
+  severity: error
+implicitly_unwrapped_optional:
+  severity: error
+
+reporter: xcode
