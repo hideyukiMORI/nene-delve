@@ -108,7 +108,7 @@ SwiftLint と swiftly の URL と SHA-256 は `eng/tool-versions.json` だけが
 draft のあいだはフルゲートを回さない。head が動いたら Draft に戻して再度 Ready にする。
 
 ワークフローに次の 4 つが揃っていることを検査が見る。`ready_for_review`、`synchronize`、`edited`、`github.event.pull_request.draft == false`。
-必須 check と strict up-to-date は ruleset の仕事であり、読み戻すまではこの規則を active にしない。
+必須 check と strict up-to-date の読み戻しは [quality/gate-proofs.md](quality/gate-proofs.md) 第 4 節にある。単一ゲートは GitHub を見ないので、この規則は planned のままである。起動条件の 4 文字列を欠くと、この ID で落ちる。
 
 - 機械強制: **planned**
 
@@ -233,7 +233,7 @@ Swift ソースの該当語には、同じ行以降に `#` と数字が要る。
 | GIT-001 | active | イベントがあるとき本文の Closes |
 | GIT-002 | active | イベントがあるとき head ブランチ名 |
 | GIT-003 | active | `.githooks/commit-msg` と `eng/commit_message.py` |
-| GIT-004 | planned | ruleset は未読。読み戻すまで設定済みと書かない |
+| GIT-004 | planned | 読み戻しは gate-proofs 第 4 節。ゲートは GitHub を見ない |
 | QLT-001 | active | ワークフローが `make check` だけを呼ぶこと、版の単一性 |
 | QLT-002 | active | `swift build -Xswiftc -warnings-as-errors` |
 | QLT-003 | active | CNF-005 |
@@ -245,7 +245,7 @@ Swift ソースの該当語には、同じ行以降に `#` と数字が要る。
 | QLT-009 | planned | 閾値は未設定 |
 | QLT-010 | 不能 | PR の手続き |
 | QLT-011 | active | 許可リストと `Package.resolved` の有無 |
-| QLT-012 | planned | 起動条件の文字列。必須 check は ruleset 待ち |
+| QLT-012 | planned | 起動条件の文字列は検査する。必須 check の読み戻しは gate-proofs 第 4 節 |
 | QLT-013 | planned | 実機確認は Phase 3。いま主張しない |
 | CNF-001 | active | `eng/conformance.py` |
 | CNF-002 | active | `eng/conformance.py` |
@@ -278,11 +278,10 @@ Swift ソースの該当語には、同じ行以降に `#` と数字が要る。
 
 ## 5. マージゲート
 
-`main` に次を要求する意図である。ruleset を `gh api` で読み戻すまでは、必須になっていると書かない。
+2026-10-23 の読み戻しは [quality/gate-proofs.md](quality/gate-proofs.md) 第 4 節。単一ゲートはこの API を見ない。応答に rule があることと、push を拒否したことは別である。
 
-- Pull Request 経由であること（未確認）
-- `make check` が成功していること（CI のジョブ名は `check`。必須 check としては未確認）
-- 期限切れ waiver が無いこと（CNF-004 がローカルと CI のゲートで見る）
-- squash merge のみ（リポジトリ作成時の設定。ruleset としての読み戻しは未確認）
+ruleset `protect-main`（id 25729406、enforcement `active`、対象 `refs/heads/main`）の rule は `pull_request`、`required_status_checks`、`non_fast_forward`、`deletion` である。`pull_request` の `allowed_merge_methods` は `squash` だけ、承認数は 0。`required_status_checks` の context は `CI / check`、`strict_required_status_checks_policy` は true。この context の check run は、この節を書いた時点ではまだ無い。
 
-`main` への直接 push、force push、ブランチ削除を ruleset で禁じる意図である。適用した事実は [quality/gate-proofs.md](quality/gate-proofs.md) に書いてからだけ主張する。
+同じ読み戻しのリポジトリ設定は、`allow_squash_merge` true、`allow_merge_commit` false、`allow_rebase_merge` false、`delete_branch_on_merge` true、`default_branch` は `main`。
+
+期限切れ waiver は CNF-004 がローカルと CI のゲートで見る。

@@ -28,7 +28,7 @@ Issue 本文の妥当性は機械が見ない。イベントファイルが無�
 例: `build/1-strict-policy-foundation`。
 
 `GITHUB_EVENT_PATH` があるとき、規約検査は PR の head ブランチ名をこの形で見る。
-`main` への直接 push、force push、ブランチ削除の禁止は、リポジトリの ruleset が担う。ruleset を読んで確認するまでは、その禁止を active と書かない。
+`main` への直接 push、force push、ブランチ削除の禁止は、リポジトリの ruleset が担う。読み戻しは [quality/gate-proofs.md](quality/gate-proofs.md) 第 4 節。単一ゲートは GitHub を見ないので、その禁止は active と書かない。
 
 - 機械強制: **active**
 
@@ -54,8 +54,7 @@ Issue 本文の妥当性は機械が見ない。イベントファイルが無�
 PR には目的、変更の要約、使った正典経路、規則 ID、検証結果、waiver、残るリスク、`Closes #N` を書く。
 1 つの PR に 1 つの作業単位。マージは squash のみ。実装中は draft のままにし、Draft から Ready にする直前に `make check` を通す。
 
-squash のみ、PR 必須、force push 禁止、ブランチ削除禁止は ruleset の仕事である。
-`gh api` で読み戻した記録が [quality/gate-proofs.md](quality/gate-proofs.md) に無いあいだは、設定済みと書かない。
+squash のみ、PR 必須、force push 禁止、ブランチ削除禁止の読み戻しは [quality/gate-proofs.md](quality/gate-proofs.md) 第 4 節にある。単一ゲートは GitHub を見ない。ruleset を外しても `make check` は落ちないので、この規則は planned のままである。
 
 - 機械強制: **planned**
 

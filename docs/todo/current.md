@@ -21,9 +21,9 @@
 
 - スクリーンセーバーとしては動かない。迷路の生成、描画、端末の制御は無い
 - `swift test -Xswiftc -warnings-as-errors` は `error: no tests found` で終了コード 1。テストターゲットが無いのでゲートは呼んでいない
-- ruleset の必須 check はまだ読み戻していない
+- ruleset `protect-main`（id 25729406）は 2026-10-23 に読み戻した。抜粋は `docs/quality/gate-proofs.md` 第 4 節。GIT-004 と QLT-012 は planned のまま
 - CI はこの要約を書いた時点ではまだ走っていない
 
 ## 次の 1 手
 
-Issue #1 の枝を Draft PR にし、ローカルのフルゲートが緑であることを確認してから Ready にする。製品の振る舞いは別の Issue で足す。
+Draft PR #2 のローカルゲートが緑なら Ready にする。CI が走った事実は、走ってからこのファイルと gate-proofs に書く。製品の振る舞いは別の Issue で足す。

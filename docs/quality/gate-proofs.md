@@ -58,7 +58,7 @@ CI: まだ走っていない
 ## 2. 発火したが active にしていないもの
 
 QLT-012 は、ワークフローから `ready_for_review` を外すと終了 1 で `QLT-012: .github/workflows/ci.yml:1: workflow is missing 'ready_for_review'` だった。
-必須 check と strict up-to-date は ruleset を読み戻していないので、この規則は planned のままである。GIT-004 も同じ理由で planned のままである。
+必須 check と strict up-to-date は第 4 節に読み戻した。単一ゲートは GitHub を見ない。ruleset を外しても `make check` は落ちないので、QLT-012 と GIT-004 は planned のままである。
 
 ARC-003 は import の違反を自分の ID では落とさない。Core の `import Foundation` は CNF-009 だった。
 
@@ -72,13 +72,20 @@ ARC-003 は import の違反を自分の ID では落とさない。Core の `im
 
 ## 4. リポジトリ設定（ruleset）
 
-読み戻していない。
+2026-10-23 に `GET /repos/hideyukiMORI/nene-delve/rulesets/25729406` と `GET /repos/hideyukiMORI/nene-delve` で読み戻した。ruleset の `created_at` は `2026-10-23T23:37:47.052+09:00`。ここは応答の抜粋であり、push を拒否した実験ではない。check run の名前が context と一致するかは、CI が走ってから確かめる。
 
-| 設定 | 値 | 確認日 |
+| 設定 | 読み戻した値 | 出所 |
 | --- | --- | --- |
-| PR 必須 | 未確認 | |
-| 必須 check | 未確認 | |
-| strict up-to-date | 未確認 | |
-| force push | 未確認 | |
-| ブランチ削除 | 未確認 | |
-| squash のみ | 未確認 | |
+| ruleset id / name / enforcement | 25729406 / protect-main / active | ruleset |
+| target / include | branch / `refs/heads/main`（exclude は空） | ruleset |
+| bypass_actors / current_user_can_bypass | 空 / `never` | ruleset |
+| pull_request | `required_approving_review_count` 0、`allowed_merge_methods` は `squash` のみ、`dismiss_stale_reviews_on_push` false、`require_code_owner_review` false、`require_last_push_approval` false、`required_review_thread_resolution` false、`required_reviewers` 空 | ruleset |
+| pull_request の追加フィールド | `require_extra_approval_for_unattributed_changes` true。送信した本文には無く、応答に付いていた | ruleset |
+| required_status_checks | context `CI / check`、`integration_id` 15368、`strict_required_status_checks_policy` true、`do_not_enforce_on_create` false | ruleset |
+| non_fast_forward | rule として在る | ruleset |
+| deletion | rule として在る | ruleset |
+| allow_squash_merge | true | リポジトリ設定 |
+| allow_merge_commit | false | リポジトリ設定 |
+| allow_rebase_merge | false | リポジトリ設定 |
+| delete_branch_on_merge | true | リポジトリ設定 |
+| default_branch | main | リポジトリ設定 |
