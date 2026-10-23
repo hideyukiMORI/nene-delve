@@ -77,17 +77,20 @@ if [ -f "$env_sh" ]; then
 fi
 hash -r
 # run 39971963866 で swiftly が終了 1 とともに要求したパッケージ。
+# run 39972237751 では索引が古く libcurl4-openssl-dev が 404 で終了 100 だった。
 # 一致する swift が既にある開発機は、上の早期 return でここへ来ない。
 if command -v apt-get >/dev/null 2>&1; then
   packages=(libcurl4-openssl-dev pkg-config python3-lldb-13)
   if [ "$(id -u)" -eq 0 ]; then
-    DEBIAN_FRONTEND=noninteractive apt-get -y install "${packages[@]}"
+    apt_root() { "$@"; }
   elif command -v sudo >/dev/null 2>&1; then
-    sudo DEBIAN_FRONTEND=noninteractive apt-get -y install "${packages[@]}"
+    apt_root() { sudo "$@"; }
   else
     echo "apt-get needs root for the Swift toolchain dependencies" >&2
     exit 1
   fi
+  apt_root env DEBIAN_FRONTEND=noninteractive apt-get update
+  apt_root env DEBIAN_FRONTEND=noninteractive apt-get -y install "${packages[@]}"
 fi
 swiftly install --assume-yes --use "$wanted"
 hash -r

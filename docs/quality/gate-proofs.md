@@ -7,7 +7,11 @@
 仕込みは記録のあとで戻した。戻したあとの `make check` は、このファイルを書き終えてから実行し、結果を `docs/todo/current.md` に書く。
 
 環境: Ubuntu glibc 2.35 / Swift 6.4.1 / swift-format 6.4.1 / SwiftLint 0.65.1 static
-CI: run 39971534377（head `361e3b1`）は Install Swift が終了 2。`env.sh` の Bad substitution。run 39971963866（head `51e121a`、ubuntu-22.04、2026-10-23）は `swiftly install` が終了 1。要求は `apt-get -y install libcurl4-openssl-dev pkg-config python3-lldb-13`。その直後に `installed successfully` と出ている。成功した run はまだ無い。
+CI（ubuntu-22.04、2026-10-23）。成功した run はまだ無い。
+
+- run 39971534377（head `361e3b1`）は Install Swift が終了 2。dash が `env.sh` の `${PATH//}` を拒否した
+- run 39971963866（head `51e121a`）は `swiftly install` が終了 1。要求は `apt-get -y install libcurl4-openssl-dev pkg-config python3-lldb-13`。直後に `installed successfully` と出た
+- run 39972237751（head `f828220`）はその apt-get が終了 100。`libcurl4-openssl-dev` が 404。ログは `apt-get update` を示している
 
 文書整合は、行頭が `| 規則ID |` の行だけを active の証明として読む。
 

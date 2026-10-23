@@ -22,8 +22,8 @@
 - スクリーンセーバーとしては動かない。迷路の生成、描画、端末の制御は無い
 - `swift test -Xswiftc -warnings-as-errors` は `error: no tests found` で終了コード 1。テストターゲットが無いのでゲートは呼んでいない
 - ruleset `protect-main`（id 25729406）は 2026-10-23 に読み戻した。抜粋は `docs/quality/gate-proofs.md` 第 4 節。GIT-004 と QLT-012 は planned のまま
-- CI run 39971534377 は Install Swift が終了 2（dash が `env.sh` を拒否）。run 39971963866 は `swiftly install` が終了 1。要求されたのは `libcurl4-openssl-dev`、`pkg-config`、`python3-lldb-13`。成功した run はまだ無い
+- CI は 3 回落ちている。39971534377 は dash が `env.sh` を拒否（終了 2）。39971963866 は `swiftly install` が終了 1。39972237751 は `libcurl4-openssl-dev` の 404 で apt-get が終了 100。成功した run はまだ無い
 
 ## 次の 1 手
 
-その 3 パッケージを導入スクリプトに足した変更の CI を見る。製品の振る舞いは別の Issue で足す。
+`apt-get update` を足した導入スクリプトの CI を見る。製品の振る舞いは別の Issue で足す。
