@@ -54,7 +54,7 @@ Terminal は Glibc を import できるが、時計と乱数は読めない。�
 
 ### Swift の導入スクリプトは bash で読む
 
-`eng/install-swift.sh` の shebang は `/bin/bash` である。swiftly の `env.sh` は `${PATH//}` を使い、ubuntu の `/bin/sh`（dash）は Bad substitution で終了 2 になる。CI の次のステップは、このプロセスの PATH を継がない。渡すときは `GITHUB_PATH` と `GITHUB_ENV` だけを使う。
+`eng/install-swift.sh` の shebang は `/bin/bash` である。swiftly の `env.sh` は `${PATH//}` を使い、ubuntu の `/bin/sh`（dash）は Bad substitution で終了 2 になる。CI の次のステップは、このプロセスの PATH を継がない。渡すときは `GITHUB_PATH` と `GITHUB_ENV` だけを使う。ubuntu-22.04 では `swiftly install` が `libcurl4-openssl-dev`、`pkg-config`、`python3-lldb-13` を要求して終了 1 になった。パッケージを足す前に、その一覧を変えない。
 
 ---
 

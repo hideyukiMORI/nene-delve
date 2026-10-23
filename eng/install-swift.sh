@@ -76,6 +76,19 @@ if [ -f "$env_sh" ]; then
   . "$env_sh"
 fi
 hash -r
+# run 39971963866 で swiftly が終了 1 とともに要求したパッケージ。
+# 一致する swift が既にある開発機は、上の早期 return でここへ来ない。
+if command -v apt-get >/dev/null 2>&1; then
+  packages=(libcurl4-openssl-dev pkg-config python3-lldb-13)
+  if [ "$(id -u)" -eq 0 ]; then
+    DEBIAN_FRONTEND=noninteractive apt-get -y install "${packages[@]}"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo DEBIAN_FRONTEND=noninteractive apt-get -y install "${packages[@]}"
+  else
+    echo "apt-get needs root for the Swift toolchain dependencies" >&2
+    exit 1
+  fi
+fi
 swiftly install --assume-yes --use "$wanted"
 hash -r
 swift --version
