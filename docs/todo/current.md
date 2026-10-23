@@ -22,8 +22,8 @@
 - スクリーンセーバーとしては動かない。迷路の生成、描画、端末の制御は無い
 - `swift test -Xswiftc -warnings-as-errors` は `error: no tests found` で終了コード 1。テストターゲットが無いのでゲートは呼んでいない
 - ruleset `protect-main`（id 25729406）は 2026-10-23 に読み戻した。抜粋は `docs/quality/gate-proofs.md` 第 4 節。GIT-004 と QLT-012 は planned のまま
-- CI はこの要約を書いた時点ではまだ走っていない
+- CI run 39971534377（ubuntu-22.04、2026-10-23）は Install Swift が終了 2。`env.sh` の `${PATH//}` を `/bin/sh` が拒否した。成功した run はまだ無い
 
 ## 次の 1 手
 
-Draft PR #2 のローカルゲートが緑なら Ready にする。CI が走った事実は、走ってからこのファイルと gate-proofs に書く。製品の振る舞いは別の Issue で足す。
+`eng/install-swift.sh` を bash にし、`GITHUB_PATH` と `GITHUB_ENV` へ渡す変更の CI を見る。製品の振る舞いは別の Issue で足す。

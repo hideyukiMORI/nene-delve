@@ -7,7 +7,7 @@
 仕込みは記録のあとで戻した。戻したあとの `make check` は、このファイルを書き終えてから実行し、結果を `docs/todo/current.md` に書く。
 
 環境: Ubuntu glibc 2.35 / Swift 6.4.1 / swift-format 6.4.1 / SwiftLint 0.65.1 static
-CI: まだ走っていない
+CI: run 39971534377（head `361e3b1`、ubuntu-22.04、2026-10-23）は Install Swift が終了 2。`eng/install-swift.sh: 6: /home/runner/.local/share/swiftly/env.sh: Bad substitution`。成功した run はまだ無い。
 
 文書整合は、行頭が `| 規則ID |` の行だけを active の証明として読む。
 

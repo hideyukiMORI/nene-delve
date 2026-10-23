@@ -52,6 +52,10 @@ Terminal は Glibc を import できるが、時計と乱数は読めない。�
 
 迷路、描画、端末制御は Phase 3 の別 Issue である。この足場の変更に混ぜない。
 
+### Swift の導入スクリプトは bash で読む
+
+`eng/install-swift.sh` の shebang は `/bin/bash` である。swiftly の `env.sh` は `${PATH//}` を使い、ubuntu の `/bin/sh`（dash）は Bad substitution で終了 2 になる。CI の次のステップは、このプロセスの PATH を継がない。渡すときは `GITHUB_PATH` と `GITHUB_ENV` だけを使う。
+
 ---
 
 ## 3. 検証コマンド

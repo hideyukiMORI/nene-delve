@@ -1,13 +1,32 @@
-#!/bin/sh
+#!/bin/bash
 # CI が Swift を入れる経路。版の入力は .swift-version だけ。
 # 既に一致する swift が見えていれば何もしない（開発機）。
+# swiftly の env.sh は bash の ${PATH//} を使う。/bin/sh（dash）で読むと
+# Bad substitution で落ちる。導入した PATH は、このプロセスだけでは次の
+# ステップに残らないので、GITHUB_PATH と GITHUB_ENV があるときだけ渡す。
 set -eu
 cd "$(dirname "$0")/.."
 wanted="$(tr -d '[:space:]' < .swift-version)"
+
+publish_swiftly_env() {
+  if [ -z "${SWIFTLY_BIN_DIR:-}" ]; then
+    return 0
+  fi
+  if [ -n "${GITHUB_PATH:-}" ]; then
+    echo "${SWIFTLY_BIN_DIR}" >> "${GITHUB_PATH}"
+  fi
+  if [ -n "${GITHUB_ENV:-}" ]; then
+    printf 'SWIFTLY_HOME_DIR=%s\nSWIFTLY_BIN_DIR=%s\nSWIFTLY_TOOLCHAINS_DIR=%s\n' \
+      "${SWIFTLY_HOME_DIR}" "${SWIFTLY_BIN_DIR}" "${SWIFTLY_TOOLCHAINS_DIR}" \
+      >> "${GITHUB_ENV}"
+  fi
+}
+
 if command -v swift >/dev/null 2>&1; then
   current="$(swift --version 2>/dev/null || true)"
   case "$current" in
     *"Swift version ${wanted}"*)
+      publish_swiftly_env
       exit 0
       ;;
   esac
@@ -60,3 +79,4 @@ hash -r
 swiftly install --assume-yes --use "$wanted"
 hash -r
 swift --version
+publish_swiftly_env
