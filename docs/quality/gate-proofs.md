@@ -7,11 +7,12 @@
 仕込みは記録のあとで戻した。戻したあとの `make check` は、このファイルを書き終えてから実行し、結果を `docs/todo/current.md` に書く。
 
 環境: Ubuntu glibc 2.35 / Swift 6.4.1 / swift-format 6.4.1 / SwiftLint 0.65.1 static
-CI（ubuntu-22.04、2026-10-23）。成功した run はまだ無い。
+CI（workflow の `runs-on` は `ubuntu-22.04`、2026-10-23）:
 
 - run 39971534377（head `361e3b1`）は Install Swift が終了 2。dash が `env.sh` の `${PATH//}` を拒否した
 - run 39971963866（head `51e121a`）は `swiftly install` が終了 1。要求は `apt-get -y install libcurl4-openssl-dev pkg-config python3-lldb-13`。直後に `installed successfully` と出た
 - run 39972237751（head `f828220`）はその apt-get が終了 100。`libcurl4-openssl-dev` が 404。ログは `apt-get update` を示している
+- run 39972426876（head `59ff3a5`）は conclusion `success`。job 名は `check`。所要 1 分 51 秒。check run の `name` は `check`、app id は 15368。`actions/checkout` は Node.js 20 非推奨の注釈を出し、ジョブは success のまま終わった
 
 文書整合は、行頭が `| 規則ID |` の行だけを active の証明として読む。
 
@@ -76,7 +77,9 @@ ARC-003 は import の違反を自分の ID では落とさない。Core の `im
 
 ## 4. リポジトリ設定（ruleset）
 
-2026-10-23 に `GET /repos/hideyukiMORI/nene-delve/rulesets/25729406` と `GET /repos/hideyukiMORI/nene-delve` で読み戻した。ruleset の `created_at` は `2026-10-23T23:37:47.052+09:00`。ここは応答の抜粋であり、push を拒否した実験ではない。check run の名前が context と一致するかは、CI が走ってから確かめる。
+2026-10-23 に `GET /repos/hideyukiMORI/nene-delve/rulesets/25729406` と `GET /repos/hideyukiMORI/nene-delve` で読み戻した。ruleset の `created_at` は `2026-10-23T23:37:47.052+09:00`、context を直したあとの `updated_at` は `2026-10-23T23:49:06.793+09:00`。ここは応答の抜粋であり、push を拒否した実験ではない。
+
+最初の context `CI / check` では、run 39972426876 が success でも `gh pr view` の `mergeStateStatus` は `BLOCKED` だった。check run の `name` は `check` だった。context を `check` に変えて読み戻したあと、同じ head `59ff3a5` で `mergeStateStatus` は `CLEAN`、`mergeable` は `MERGEABLE` だった。マージはしていない。
 
 | 設定 | 読み戻した値 | 出所 |
 | --- | --- | --- |
@@ -85,7 +88,7 @@ ARC-003 は import の違反を自分の ID では落とさない。Core の `im
 | bypass_actors / current_user_can_bypass | 空 / `never` | ruleset |
 | pull_request | `required_approving_review_count` 0、`allowed_merge_methods` は `squash` のみ、`dismiss_stale_reviews_on_push` false、`require_code_owner_review` false、`require_last_push_approval` false、`required_review_thread_resolution` false、`required_reviewers` 空 | ruleset |
 | pull_request の追加フィールド | `require_extra_approval_for_unattributed_changes` true。送信した本文には無く、応答に付いていた | ruleset |
-| required_status_checks | context `CI / check`、`integration_id` 15368、`strict_required_status_checks_policy` true、`do_not_enforce_on_create` false | ruleset |
+| required_status_checks | context `check`、`integration_id` 15368、`strict_required_status_checks_policy` true、`do_not_enforce_on_create` false | ruleset（`updated_at` `2026-10-23T23:49:06.793+09:00`） |
 | non_fast_forward | rule として在る | ruleset |
 | deletion | rule として在る | ruleset |
 | allow_squash_merge | true | リポジトリ設定 |

@@ -280,7 +280,7 @@ Swift ソースの該当語には、同じ行以降に `#` と数字が要る。
 
 2026-10-23 の読み戻しは [quality/gate-proofs.md](quality/gate-proofs.md) 第 4 節。単一ゲートはこの API を見ない。応答に rule があることと、push を拒否したことは別である。
 
-ruleset `protect-main`（id 25729406、enforcement `active`、対象 `refs/heads/main`）の rule は `pull_request`、`required_status_checks`、`non_fast_forward`、`deletion` である。`pull_request` の `allowed_merge_methods` は `squash` だけ、承認数は 0。`required_status_checks` の context は `CI / check`、`strict_required_status_checks_policy` は true。この context の check run は、この節を書いた時点ではまだ無い。
+ruleset `protect-main`（id 25729406、enforcement `active`、対象 `refs/heads/main`）の rule は `pull_request`、`required_status_checks`、`non_fast_forward`、`deletion` である。`pull_request` の `allowed_merge_methods` は `squash` だけ、承認数は 0。`required_status_checks` の context は `check`、`strict_required_status_checks_policy` は true。run 39972426876 の check run 名が `check` だった。context をそれに合わせたあと、head `59ff3a5` の `mergeStateStatus` は `CLEAN` だった。
 
 同じ読み戻しのリポジトリ設定は、`allow_squash_merge` true、`allow_merge_commit` false、`allow_rebase_merge` false、`delete_branch_on_merge` true、`default_branch` は `main`。
 

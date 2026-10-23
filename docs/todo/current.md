@@ -21,9 +21,9 @@
 
 - スクリーンセーバーとしては動かない。迷路の生成、描画、端末の制御は無い
 - `swift test -Xswiftc -warnings-as-errors` は `error: no tests found` で終了コード 1。テストターゲットが無いのでゲートは呼んでいない
-- ruleset `protect-main`（id 25729406）は 2026-10-23 に読み戻した。抜粋は `docs/quality/gate-proofs.md` 第 4 節。GIT-004 と QLT-012 は planned のまま
-- CI は 3 回落ちている。39971534377 は dash が `env.sh` を拒否（終了 2）。39971963866 は `swiftly install` が終了 1。39972237751 は `libcurl4-openssl-dev` の 404 で apt-get が終了 100。成功した run はまだ無い
+- ruleset `protect-main`（id 25729406）の必須 check context は `check`。head `59ff3a5` で `mergeStateStatus` は `CLEAN` だった。GIT-004 と QLT-012 は planned のまま。単一ゲートは GitHub を見ない
+- CI run 39972426876 は success。それより前の 39971534377、39971963866、39972237751 は Install Swift で落ちた。経過は `docs/quality/gate-proofs.md` の冒頭
 
 ## 次の 1 手
 
-`apt-get update` を足した導入スクリプトの CI を見る。製品の振る舞いは別の Issue で足す。
+製品の振る舞い（迷路、描画、端末）は別の Issue で足す。PR #2 は Ready である。マージは施主が行う。この要約の push は CI をもう一度起動する。
