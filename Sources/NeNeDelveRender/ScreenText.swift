@@ -1,7 +1,7 @@
 import NeNeDelveCore
 
 public enum ScreenText {
-  public static let hudRows = 2
+  public static let hudRows = 3
   public static let tooSmall = "端末が小さすぎる"
   public static let notATerminal = "端末ではありません"
   public static let terminalRejected = "端末を初期化できません"
@@ -50,6 +50,23 @@ public enum ScreenText {
 
   public static func floorLabel(_ floor: FloorIndex) -> String {
     "B\(floor.depth)F"
+  }
+
+  public static func facingLine(_ facing: Direction) -> String {
+    switch facing {
+    case .north:
+      "N"
+    case .east:
+      "E"
+    case .south:
+      "S"
+    case .west:
+      "W"
+    }
+  }
+
+  public static func placeLine(_ place: CellPoint) -> String {
+    "X" + DigitText.padded(place.x, width: 3) + " Y" + DigitText.padded(place.y, width: 3)
   }
 
   public static func viewLine(_ view: ViewMode) -> String {

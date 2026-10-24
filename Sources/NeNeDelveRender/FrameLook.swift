@@ -4,11 +4,11 @@ import NeNeDelveCore
 public struct FrameLook: Equatable, Sendable {
   public let theme: ThemeName
   public let view: ViewMode
-  public let facing: Direction
+  public let gaze: Gaze
 
-  public init(theme: ThemeName, view: ViewMode, facing: Direction) {
+  public init(theme: ThemeName, view: ViewMode, gaze: Gaze) {
     self.theme = theme
     self.view = view
-    self.facing = facing
+    self.gaze = gaze
   }
 }

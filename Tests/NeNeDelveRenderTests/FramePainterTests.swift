@@ -9,15 +9,18 @@ struct FramePainterTests {
     let grid = FramePainter.paint(
       world: world, clock: sampleClock(), look: flat(), canvas: canvas(for: world))
     let top = line(grid, row: 0)
-    let theme = line(grid, row: 1)
-    let shown = top + theme
+    let belt = line(grid, row: 1)
+    let foot = line(grid, row: 2)
+    let shown = top + belt + foot
     #expect(shown.contains("B1F"))
     #expect(shown.contains("01:01:01"))
     #expect(shown.contains("00:00:05"))
     #expect(shown.contains("2026-10-24 12:40:00"))
     #expect(shown.contains("(9)"))
     #expect(shown.contains("NEON GRID"))
-    #expect(top.hasSuffix("2D"))
+    #expect(shown.contains("2D"))
+    #expect(shown.contains("/"))
+    #expect(shown.contains("="))
     #expect(!shown.contains("SEED:"))
     #expect(!shown.contains("MODE:"))
     #expect(
@@ -169,7 +172,7 @@ struct FramePainterTests {
     let maze = nearHall()
     let grid = FramePainter.paint(
       world: world(maze), clock: sampleClock(),
-      look: FrameLook(theme: .neonGrid, view: .depth, facing: .east), canvas: canvas(forMaze: maze))
+      look: eyed(maze), canvas: canvas(forMaze: maze))
     let shown = column(grid, at: grid.span.width / 2)
     let frame = picture(grid)
     #expect(shown.contains(">"))
@@ -187,7 +190,7 @@ struct FramePainterTests {
     let grid = FramePainter.paint(
       world: stocked(maze, chest: chest, beast: beast),
       clock: sampleClock(),
-      look: FrameLook(theme: .neonGrid, view: .depth, facing: .east), canvas: canvas(forMaze: maze)
+      look: eyed(maze), canvas: canvas(forMaze: maze)
     )
     let shown = picture(grid)
     #expect(shown.contains("$"))
@@ -250,7 +253,13 @@ struct FramePainterTests {
   }
 
   private func flat() -> FrameLook {
-    FrameLook(theme: .neonGrid, view: .plan, facing: .north)
+    FrameLook(
+      theme: .neonGrid, view: .plan, gaze: Gaze(facing: .north, place: CellPoint(x: 1, y: 1)))
+  }
+
+  private func eyed(_ maze: Maze) -> FrameLook {
+    FrameLook(
+      theme: .neonGrid, view: .depth, gaze: Gaze(facing: .east, place: maze.start))
   }
 
   private func world(_ maze: Maze) -> FloorWorld {

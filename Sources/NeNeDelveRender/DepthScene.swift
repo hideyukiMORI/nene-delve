@@ -4,7 +4,7 @@ struct DepthScene {
   let world: FloorWorld
   let palette: ThemePalette
   let canvas: GridSpan
-  let facing: Direction
+  let gaze: Gaze
 
   mutating func paint(into cells: inout [Cell]) {
     let height = canvas.height - ScreenText.hudRows
@@ -12,7 +12,7 @@ struct DepthScene {
       return
     }
     let cast = DepthCaster.Cast(
-      maze: world.walk.maze, from: world.walk.explorer.position, facing: facing)
+      maze: world.walk.maze, origin: DepthEye.origin(gaze), facing: gaze.facing)
     let hits = DepthCaster.columns(cast, count: canvas.width)
     let distances = draw(hits, height: height, into: &cells)
     edges(hits, height: height, into: &cells)
@@ -200,14 +200,15 @@ struct DepthScene {
     if below <= 0 {
       return nil
     }
-    let heading = DepthCaster.aim(facing)
+    let heading = DepthCaster.aim(gaze.facing)
     let skew = DepthCaster.plane(heading)
     let offset = DepthCaster.camera(column, count: canvas.width)
     let dirX = heading.x + skew.x * offset
     let dirY = heading.y + skew.y * offset
     let distance = horizon / below
-    let worldX = Double(world.walk.explorer.position.x) + 0.5 + distance * dirX
-    let worldY = Double(world.walk.explorer.position.y) + 0.5 + distance * dirY
+    let origin = DepthEye.origin(gaze)
+    let worldX = origin.x + distance * dirX
+    let worldY = origin.y + distance * dirY
     return CellPoint(x: Int(worldX.rounded(.down)), y: Int(worldY.rounded(.down)))
   }
 
@@ -273,9 +274,10 @@ struct DepthScene {
   }
 
   private func cast(_ point: CellPoint, viewHeight: Int) -> CastPoint? {
-    let dx = Double(point.x - world.walk.explorer.position.x)
-    let dy = Double(point.y - world.walk.explorer.position.y)
-    let heading = DepthCaster.aim(facing)
+    let origin = DepthEye.origin(gaze)
+    let dx = Double(point.x) + 0.5 - origin.x
+    let dy = Double(point.y) + 0.5 - origin.y
+    let heading = DepthCaster.aim(gaze.facing)
     let skew = DepthCaster.plane(heading)
     let det = skew.x * heading.y - heading.x * skew.y
     if det == 0 {

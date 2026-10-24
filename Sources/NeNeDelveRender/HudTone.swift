@@ -15,21 +15,10 @@ enum HudTone {
   }
 
   private static func quiet(_ mark: Mark) -> Bool {
-    if mark.row == 1 {
-      return !mark.glyph.isNumber
-    }
-    return floorMark(mark)
-  }
-
-  private static func floorMark(_ mark: Mark) -> Bool {
-    if mark.row != 0 || !mark.line.hasPrefix("B") {
+    if mark.glyph.isNumber || mark.glyph.isLetter {
       return false
     }
-    guard let fence = mark.line.firstIndex(of: "F") else {
-      return false
-    }
-    let end = mark.line.distance(from: mark.line.startIndex, to: fence)
-    return mark.column == 0 || mark.column == end
+    return true
   }
 
   private static func softened(_ ink: Rgb, on ground: Rgb) -> Rgb {

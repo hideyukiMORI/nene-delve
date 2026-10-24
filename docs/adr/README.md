@@ -18,3 +18,4 @@ ADR は「なぜそう決めたか」「何を却下したか」を書く。
 | --- | --- | --- |
 | [0001](0001-strictness-is-mechanically-enforced.md) | 厳格さは機械で強制する | 受理 |
 | [0002](0002-swift-testing-only.md) | テスト枠組みは Swift Testing だけ | 受理 |
+| [0003](0003-gaze-and-visor.md) | 視線はフレームが持ち、HUD は 3 行の計器にする | 受理 |
