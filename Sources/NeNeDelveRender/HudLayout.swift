@@ -14,16 +14,9 @@ public struct HudLayout: Equatable, Sendable {
     -> HudLayout
   {
     let marks = Marks(floor: floor, theme: look.theme, view: look.view)
-    let labeled = pack(fields(clock, marks: marks, labeled: true), width: width)
-    if labeled.complete {
-      return labeled.layout
-    }
-    return pack(fields(clock, marks: marks, labeled: false), width: width).layout
-  }
-
-  private struct Field {
-    let text: String
-    let essential: Bool
+    let omitting = fit(clock, marks: marks, width: width)
+    return aligned(clock, marks: marks, omitting: omitting, width: width)
+      ?? HudLayout(first: "", second: "")
   }
 
   private struct Marks {
@@ -32,74 +25,93 @@ public struct HudLayout: Equatable, Sendable {
     let view: ViewMode
   }
 
-  private static func fields(_ clock: HudClock, marks: Marks, labeled: Bool) -> [Field] {
-    let total = DigitText.elapsed(clock.elapsed.totalSeconds)
-    let stage = DigitText.elapsed(clock.elapsed.stageSeconds)
-    let when = DigitText.date(clock.date) + " " + DigitText.clock(clock.time)
-    let seed = String(clock.seed.raw)
-    if labeled {
-      return [
-        Field(text: "//FLR:" + ScreenText.floorLabel(marks.floor), essential: true),
-        Field(text: "UP:" + total, essential: true),
-        Field(text: "STG:" + stage, essential: true),
-        Field(text: when, essential: true),
-        Field(text: "SEED:" + seed, essential: true),
-        Field(text: "SYS:" + ScreenText.themeLine(marks.theme), essential: false),
-        Field(text: "MODE:" + ScreenText.viewLine(marks.view), essential: false),
-      ]
-    }
-    return [
-      Field(text: ScreenText.floorLabel(marks.floor), essential: true),
-      Field(text: total, essential: true),
-      Field(text: stage, essential: true),
-      Field(text: when, essential: true),
-      Field(text: seed, essential: true),
-    ]
+  private enum Kind {
+    case floor
+    case elapsed
+    case stage
+    case date
+    case view
+    case seed
+    case theme
   }
 
-  private static func pack(_ fields: [Field], width: Int) -> (layout: HudLayout, complete: Bool) {
-    var lines = [[String](), [String]()]
-    var line = 0
-    var complete = true
-    for field in fields {
-      if place(field, into: &lines, line: &line, width: width) {
-        continue
-      }
-      if field.essential {
-        complete = false
+  private static let dropOrder: [Kind] = [
+    .date, .theme, .stage, .elapsed, .view, .floor, .seed,
+  ]
+
+  private static func fit(_ clock: HudClock, marks: Marks, width: Int) -> Set<Kind> {
+    var omitted: Set<Kind> = []
+    if rowFits(clock, marks: marks, omitting: omitted, width: width) {
+      return omitted
+    }
+    for kind in dropOrder {
+      omitted.insert(kind)
+      if rowFits(clock, marks: marks, omitting: omitted, width: width) {
+        return omitted
       }
     }
-    return (HudLayout(first: join(lines[0]), second: join(lines[1])), complete)
+    return omitted
   }
 
-  private static func place(
-    _ field: Field, into lines: inout [[String]], line: inout Int, width: Int
-  )
+  private static func rowFits(_ clock: HudClock, marks: Marks, omitting: Set<Kind>, width: Int)
     -> Bool
   {
-    if width <= 0 || field.text.isEmpty {
-      return false
-    }
-    if line < 2, put(field.text, into: &lines[line], width: width) {
-      return true
-    }
-    if line == 0 {
-      line = 1
-      return put(field.text, into: &lines[line], width: width)
-    }
-    return false
+    aligned(clock, marks: marks, omitting: omitting, width: width) != nil
   }
 
-  private static func put(_ text: String, into line: inout [String], width: Int) -> Bool {
-    let next = join(line + [text])
-    if next.count > width {
-      return false
+  private static func aligned(
+    _ clock: HudClock, marks: Marks, omitting: Set<Kind>, width: Int
+  ) -> HudLayout? {
+    let mode = omitting.contains(.view) ? "" : ScreenText.viewLine(marks.view)
+    let seed = omitting.contains(.seed) ? "" : "(" + String(clock.seed.raw) + ")"
+    let theme = omitting.contains(.theme) ? "" : ScreenText.themeLine(marks.theme)
+    guard
+      let first = row(
+        left: cluster(clock, marks: marks, omitting: omitting), right: mode, width: width),
+      let second = row(left: seed, right: theme, width: width)
+    else {
+      return nil
     }
-    line.append(text)
-    return true
+    return HudLayout(first: first, second: second)
   }
 
-  private static func join(_ parts: [String]) -> String {
-    parts.joined(separator: " ")
+  private static func cluster(_ clock: HudClock, marks: Marks, omitting: Set<Kind>) -> String {
+    var parts: [String] = []
+    if !omitting.contains(.floor) {
+      parts.append(ScreenText.floorLabel(marks.floor))
+    }
+    if !omitting.contains(.elapsed) {
+      parts.append(DigitText.elapsed(clock.elapsed.totalSeconds))
+    }
+    if !omitting.contains(.stage) {
+      parts.append(DigitText.elapsed(clock.elapsed.stageSeconds))
+    }
+    if !omitting.contains(.date) {
+      parts.append(DigitText.date(clock.date) + " " + DigitText.clock(clock.time))
+    }
+    return parts.joined(separator: "  ")
+  }
+
+  private static func row(left: String, right: String, width: Int) -> String? {
+    if width <= 0 {
+      return nil
+    }
+    if right.isEmpty {
+      if left.count > width {
+        return nil
+      }
+      return left
+    }
+    if left.isEmpty {
+      if right.count > width {
+        return nil
+      }
+      return String(repeating: " ", count: width - right.count) + right
+    }
+    let gap = width - left.count - right.count
+    if gap < 2 {
+      return nil
+    }
+    return left + String(repeating: " ", count: gap) + right
   }
 }

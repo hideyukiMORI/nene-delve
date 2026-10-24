@@ -10,10 +10,11 @@
 | Phase 0 言語の実測 | 2026-10-23 に実施。抜粋は `docs/quality/phase0-results.json` |
 | Phase 1 文書とゲートの足場 | `make check` が終了コード 0（2026-10-23、この作業木） |
 | Phase 2 negative proof | `docs/quality/gate-proofs.md` に記録した規則だけを active にした |
-| Phase 3 縦切り 1 本 | タイプ A とタイプ B が階のシードで選ばれる。壁は一筆、踏破は `.`。宝箱は `$`。湖とモンスターはテーマの色。テーマは 10 種で `t` / `T`。表示は `v` / `V` で平面と疑似 3D |
+| Phase 3 縦切り 1 本 | タイプ A とタイプ B が階のシードで選ばれる。壁は一筆、踏破は `.`。宝箱は `$`。湖とモンスターはテーマの色。テーマは 10 種で `t` / `T`。表示は `v` / `V` で平面と疑似 3D。疑似 3D は面と縁の線。HUD の地は塗らない |
 
 ## 動くもの
 
+- 2026-10-24 22:10 に `make check` は終了コード 0。内訳は unittest 24 件、`conformance: ok`、swift-format、SwiftLint 0 件（67 files）、Swift Testing（Core 30、Render 27、Terminal 4）、`swift build -Xswiftc -warnings-as-errors` 成功。同じ実行の `swift test -Xswiftc -warnings-as-errors` も終了コード 0
 - 2026-10-24 20:02 に `make check` は終了コード 0。内訳は unittest 24 件、`conformance: ok`、swift-format、SwiftLint 0 件（65 files）、Swift Testing（Core 30、Render 23、Terminal 4）、`swift build -Xswiftc -warnings-as-errors` 成功
 - 同じ実行で `swift test -Xswiftc -warnings-as-errors` は終了コード 0
 - 端末でないとき、実行ファイルは `端末ではありません` を 1 行出して終了コード 1。不明な起動オプションは `不明な起動オプションです` で終了コード 1
@@ -26,6 +27,9 @@
 - 14:32 の 100 列 32 行 `--seed 2` で、通路に赤い `!` が点滅した。`--seed 9` では走者の隣に赤い `&` があり、下に `#` が走った。同じ画面に湖と `$` がある。`q` で終了コード 0、標準エラーは空
 - 14:38 の 100 列 32 行 `--seed 9` で、`t` のあと HUD は `PHOSPHOR` で壁が緑、次の `t` で `AMBER TERM`、`T` で `PHOSPHOR` に戻った。`q` で終了コード 0、標準エラーは空
 - 19:59 の 100 列 32 行 `--seed 9` で、HUD は `//FLR:B1F` `UP:` `STG:` 日時 `SEED:9` `SYS:NEON GRID` `MODE:2D`、地は chip。`v` のあと `MODE:3D`。通路は `#` `%` `+` `:` で近くが太く、中央に `+`。20:02 の同じ大きさで `v` のあと `q` は終了コード 0、標準エラーは空。行き止まりでは `#` が画面を埋める
+- 22:02 の 100 列 32 行 `--seed 9` で、HUD 1 行目は `B1F`、通算、この階、日時、右端 `2D`。2 行目は `(9)` と `NEON GRID`。`//FLR:` `SEED:` `SYS:` `MODE:` は無い。地は `(0,0,0)`。`B` と `F` と `(` は `(0,165,165)`、数字は `(0,255,255)`。壁は `+` `-` `|`、踏破は `.`、走者 `@` の地は `(72,0,84)`。`v` のあと右端は `3D`。1.3 秒と 2.4 秒の画面に `#` `%` `+` は無い。2.4 秒の近い壁は 19 行で、上に天井 5 行、下に床 5 行が残る。`q` は終了コード 0、標準エラーは空
+- 同じ 22:02 の 110 列 36 行 `--seed 7` では、下端の水面が `(0,60,120)`。100 列 32 行の `--seed 1` と `--seed 2` も面と `-` と `|` で、`#` は無い
+- 22:08 の 100 列 32 行 `--seed 9` で `v` のあと、絵が変わるまでの静止は中央値 0.184 秒。0.36 秒前後の静止も並ぶ。20.4 秒の画面に赤い `&` がある。40 秒のあいだ、安定した 3D の画面に `>` は出なかった。`q` は終了コード 0、標準エラーは空
 - PR #2 は `MERGED`（`mergedAt` `2026-10-23T16:10:28Z`、merge commit `c4834cf084b241a6eccbc7de6cb2e75e7bf2d700`）。Issue #1 は `CLOSED`（`closedAt` `2026-10-23T16:10:30Z`）
 
 ## 動かないもの
@@ -37,4 +41,4 @@
 
 ## 次の 1 手
 
-上の残を、1 つずつ別の Issue で足す。実機の Windows Terminal での見た目は、まだ施主の画面では見ていない。
+上の残を、1 つずつ別の Issue で足す。線と面の疑似 3D は上の 22:02 の測定で動いている。実機の Windows Terminal での見た目は、まだ施主の画面では見ていない。
