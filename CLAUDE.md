@@ -100,4 +100,4 @@ Waivers: none | WVR-NNNN
 ## 6. いまの状況
 
 現在のタスクは [docs/todo/current.md](docs/todo/current.md)。GitHub Issue が正で、そこは要約。
-タイプ A、タイプ B、宝箱、湖は起動する。テーマ切替はまだ無い。詳細は `docs/todo/current.md`。
+タイプ A、タイプ B、宝箱、湖、モンスターは起動する。テーマ切替はまだ無い。詳細は `docs/todo/current.md`。

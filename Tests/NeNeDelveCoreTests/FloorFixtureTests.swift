@@ -55,6 +55,139 @@ struct FloorFixtureTests {
     #expect(without > 0)
   }
 
+  @Test func theSameSeedPlacesTheSameProwler() {
+    let span = GridSpan(width: 41, height: 21)
+    let first = opened(1, span: span)
+    let second = opened(1, span: span)
+    #expect(first?.fixtures.prowlers == second?.fixtures.prowlers)
+    var differed = false
+    for raw in 2...12 {
+      if opened(UInt64(raw), span: span)?.fixtures.prowlers != first?.fixtures.prowlers {
+        differed = true
+      }
+    }
+    #expect(differed)
+  }
+
+  @Test func someFloorsHaveAProwler() {
+    var withBeast = 0
+    var without = 0
+    var chases = 0
+    var stands = 0
+    for raw in 1...36 {
+      guard let world = opened(UInt64(raw), span: GridSpan(width: 41, height: 21)) else {
+        Issue.record("expected a world")
+        return
+      }
+      let beasts = world.fixtures.prowlers
+      if beasts.isEmpty {
+        without += 1
+        continue
+      }
+      withBeast += 1
+      #expect(beasts.count == 1)
+      let beast = beasts[0]
+      #expect(world.walk.maze.tile(at: beast.point) == .floor)
+      #expect(beast.point != world.walk.maze.start)
+      #expect(beast.point != world.walk.maze.stairs)
+      #expect(!world.fixtures.lake(at: beast.point))
+      #expect(!world.fixtures.sealed(at: beast.point))
+      switch beast.mood {
+      case .blink:
+        break
+      case .fight, .flee, .gone:
+        Issue.record("a new prowler should blink")
+      }
+      if beast.chases {
+        chases += 1
+      } else {
+        stands += 1
+      }
+    }
+    #expect(withBeast > 0)
+    #expect(without > 0)
+    #expect(chases > 0)
+    #expect(stands > 0)
+  }
+
+  @Test func aFightHoldsTheRunnerThenEnds() {
+    guard var world = opened(1, span: GridSpan(width: 21, height: 15)) else {
+      Issue.record("expected a world")
+      return
+    }
+    guard let beside = beside(world) else {
+      Issue.record("expected a neighboring floor")
+      return
+    }
+    world = meet(world, beast: FloorProwler(point: beside, chases: false, mood: .blink))
+    let origin = world.walk.explorer.position
+    #expect(world.fixtures.hold == FloorProwler.fightSpan)
+    var ticks = 0
+    while ticks < FloorProwler.fightSpan {
+      ticks += 1
+      switch FloorReducer.tick(world) {
+      case .running(let next):
+        #expect(next.walk.explorer.position == origin)
+        world = next
+      case .descended, .stuck:
+        Issue.record("the fight ended the floor")
+        return
+      }
+    }
+    #expect(world.fixtures.prowlers.isEmpty)
+    #expect(world.fixtures.hold == 0)
+  }
+
+  @Test func aChaserFleesAndThenVanishes() {
+    guard var world = opened(1, span: GridSpan(width: 21, height: 15)) else {
+      Issue.record("expected a world")
+      return
+    }
+    guard let beside = beside(world) else {
+      Issue.record("expected a neighboring floor")
+      return
+    }
+    world = meet(world, beast: FloorProwler(point: beside, chases: true, mood: .blink))
+    var ticks = 0
+    while ticks < FloorProwler.fightSpan {
+      ticks += 1
+      switch FloorReducer.tick(world) {
+      case .running(let next):
+        world = next
+      case .descended, .stuck:
+        Issue.record("the fight ended the floor")
+        return
+      }
+    }
+    #expect(!world.fixtures.prowlers.isEmpty)
+    while ticks < FloorProwler.fightSpan + FloorProwler.fleeSpan {
+      ticks += 1
+      switch FloorReducer.tick(world) {
+      case .running(let next):
+        world = next
+      case .descended, .stuck:
+        Issue.record("the flight ended the floor")
+        return
+      }
+    }
+    #expect(world.fixtures.prowlers.isEmpty)
+  }
+
+  @Test func aChaserStepsCloser() {
+    guard let world = opened(1, span: GridSpan(width: 41, height: 21)) else {
+      Issue.record("expected a world")
+      return
+    }
+    guard let far = distantFloor(world) else {
+      Issue.record("expected a distant floor")
+      return
+    }
+    let beast = FloorProwler(point: far, chases: true, mood: .blink)
+    let chased = FloorFixtureField(fixtures: [], wade: 0, prowlers: [beast]).hunted(
+      world.walk.explorer.position, in: world.walk.maze)
+    #expect(chased.prowlers[0].point != far)
+  }
+
   @Test func wadingPausesOnALake() {
     let point = CellPoint(x: 2, y: 2)
     let lake = FloorFixture(point: point, kind: .lake, phase: .open)
@@ -102,6 +235,49 @@ struct FloorFixtureTests {
       return nil
     }
     return world
+  }
+
+  private func meet(_ world: FloorWorld, beast: FloorProwler) -> FloorWorld {
+    let caught = FloorFixtureField(
+      fixtures: world.fixtures.fixtures, wade: world.fixtures.wade, prowlers: [beast]
+    ).encountered(world.walk.explorer.position)
+    return FloorWorld(course: world.course, walk: world.walk, fixtures: caught, aim: world.aim)
+  }
+
+  private func beside(_ world: FloorWorld) -> CellPoint? {
+    let origin = world.walk.explorer.position
+    let steps = [
+      CellPoint(x: 1, y: 0), CellPoint(x: -1, y: 0), CellPoint(x: 0, y: 1),
+      CellPoint(x: 0, y: -1),
+    ]
+    for step in steps {
+      let next = CellPoint(x: origin.x + step.x, y: origin.y + step.y)
+      if world.walk.maze.span.contains(next) && world.walk.maze.tile(at: next) == .floor {
+        return next
+      }
+    }
+    return nil
+  }
+
+  private func distantFloor(_ world: FloorWorld) -> CellPoint? {
+    let runner = world.walk.explorer.position
+    let maze = world.walk.maze
+    var row = 0
+    while row < maze.span.height {
+      var column = 0
+      while column < maze.span.width {
+        let point = CellPoint(x: column, y: row)
+        let distance = abs(point.x - runner.x) + abs(point.y - runner.y)
+        if distance >= 4 && maze.tile(at: point) == .floor
+          && FloorRoute.firstStep(maze, from: point, to: runner) != nil
+        {
+          return point
+        }
+        column += 1
+      }
+      row += 1
+    }
+    return nil
   }
 
   private func lakePoints(_ world: FloorWorld) -> [CellPoint] {

@@ -67,6 +67,9 @@ public enum FramePainter {
       if let spark = spark(world, point) {
         return spark
       }
+      if let beast = prowlerMark(world, point) {
+        return beast
+      }
       switch world.walk.maze.tile(at: point) {
       case .wall:
         return wall(world, point: point)
@@ -196,6 +199,60 @@ public enum FramePainter {
 
     func visited(_ world: FloorWorld, _ point: CellPoint) -> Bool {
       world.walk.explorer.seen[world.walk.maze.span.offset(point)]
+    }
+
+    func prowlerMark(_ world: FloorWorld, _ point: CellPoint) -> Cell? {
+      if let flash = clash(world, point) {
+        return flash
+      }
+      guard let beast = world.fixtures.prowler(at: point) else {
+        return nil
+      }
+      return Cell(
+        glyph: beastGlyph(beast, steps: world.walk.steps),
+        foreground: palette.accent.mark.threat, background: standing(world, point))
+    }
+
+    func clash(_ world: FloorWorld, _ point: CellPoint) -> Cell? {
+      guard let beast = world.fixtures.fighting() else {
+        return nil
+      }
+      let column = point.x - beast.point.x
+      let row = point.y - beast.point.y
+      if abs(column) + abs(row) != 1 || !isOpen(world, point) {
+        return nil
+      }
+      guard let age = fightAge(beast) else {
+        return nil
+      }
+      return Cell(
+        glyph: ScreenText.clash(age), foreground: palette.accent.mark.threat,
+        background: palette.ink.background)
+    }
+
+    func fightAge(_ beast: FloorProwler) -> Int? {
+      switch beast.mood {
+      case .fight(let age):
+        age
+      case .blink, .flee, .gone:
+        nil
+      }
+    }
+
+    func beastGlyph(_ beast: FloorProwler, steps: Int) -> Character {
+      switch beast.mood {
+      case .blink:
+        steps.isMultiple(of: 2) ? ScreenText.prowler : ScreenText.alarm
+      case .fight, .flee, .gone:
+        ScreenText.prowler
+      }
+    }
+
+    func standing(_ world: FloorWorld, _ point: CellPoint) -> Rgb {
+      if world.fixtures.lake(at: point) {
+        return palette.accent.mark.water
+      }
+      return palette.ink.background
     }
 
     func runner(_ world: FloorWorld, point: CellPoint) -> Cell {

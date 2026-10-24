@@ -14,6 +14,8 @@ public enum ScreenText {
   public static let runner: Character = "@"
   public static let stairs: Character = ">"
   public static let chest: Character = "$"
+  public static let prowler: Character = "&"
+  public static let alarm: Character = "!"
 
   public static func spark(_ age: Int) -> Character {
     let marks = Array("*%~^")
@@ -24,6 +26,12 @@ public enum ScreenText {
   public static func ripple(_ phase: Int) -> Character {
     let marks = Array("~`'")
     let index = phase % marks.count
+    return marks[index]
+  }
+
+  public static func clash(_ age: Int) -> Character {
+    let marks = Array("*#%x")
+    let index = age % marks.count
     return marks[index]
   }
 

@@ -30,6 +30,13 @@ public enum FloorReducer {
         world, explorer: world.walk.explorer, rng: world.walk.rng, fixtures: paused)
       return .running(held)
     }
+    if let acting = world.fixtures.performing(
+      in: world.walk.maze, runner: world.walk.explorer.position)
+    {
+      let held = advanced(
+        world, explorer: world.walk.explorer, rng: world.walk.rng, fixtures: acting)
+      return .running(held)
+    }
     switch world.aim {
     case .explore:
       return explore(world)
@@ -99,6 +106,8 @@ public enum FloorReducer {
       ? world.fixtures.beginBurst(at: explorer.position)
       : world.fixtures
     let fixtures = opened.entered(explorer.position)
+      .hunted(explorer.position, in: world.walk.maze)
+      .encountered(explorer.position)
     let stepped = advanced(world, explorer: explorer, rng: rng, fixtures: fixtures)
     return .running(retarget(stepped, aim: aim))
   }

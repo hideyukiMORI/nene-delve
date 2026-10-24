@@ -115,6 +115,27 @@ struct FramePainterTests {
     #expect(painted.background == ThemePalette.palette(.neonGrid).accent.mark.water)
   }
 
+  @Test func aProwlerBlinksAndAFightFlashes() {
+    let maze = rectangle()
+    let spot = CellPoint(x: 4, y: 4)
+    let blinking = FloorProwler(point: spot, chases: false, mood: .blink)
+    let quiet = FramePainter.paint(
+      world: haunted(maze, beast: blinking, steps: 0),
+      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    let body = cell(quiet, point: spot)
+    #expect(body.glyph == ScreenText.prowler)
+    #expect(body.foreground == ThemePalette.palette(.neonGrid).accent.mark.threat)
+    let alarm = FramePainter.paint(
+      world: haunted(maze, beast: blinking, steps: 1),
+      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    #expect(glyph(alarm, point: spot) == ScreenText.alarm)
+    let fighting = FloorProwler(point: spot, chases: true, mood: .fight(1))
+    let battle = FramePainter.paint(
+      world: haunted(maze, beast: fighting, steps: 1),
+      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    #expect(glyph(battle, point: CellPoint(x: 4, y: 3)) == ScreenText.clash(1))
+  }
+
   @Test func screenTextKeepsTheTooSmallLine() {
     #expect(ScreenText.tooSmall == "端末が小さすぎる")
     #expect(ScreenText.rejection(.unknownOption) == "不明な起動オプションです")
@@ -157,6 +178,17 @@ struct FramePainterTests {
       walk: FloorWalk(
         maze: maze, explorer: Explorer.begin(maze), rng: SplitMix64(seed: Seed(raw: 1)), steps: 0),
       fixtures: FloorFixtureField(fixtures: [fixture], wade: 0),
+      aim: .explore
+    )
+  }
+
+  private func haunted(_ maze: Maze, beast: FloorProwler, steps: Int) -> FloorWorld {
+    FloorWorld(
+      course: FloorCourse(launchSeed: Seed(raw: 1), floor: .first, pace: .explore),
+      walk: FloorWalk(
+        maze: maze, explorer: Explorer.begin(maze), rng: SplitMix64(seed: Seed(raw: 1)),
+        steps: steps),
+      fixtures: FloorFixtureField(fixtures: [], wade: 0, prowlers: [beast]),
       aim: .explore
     )
   }

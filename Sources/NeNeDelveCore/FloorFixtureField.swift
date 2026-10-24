@@ -12,10 +12,16 @@ public struct FloorFixtureField: Equatable, Sendable {
 
   public let fixtures: [FloorFixture]
   public let wade: Int
+  public let hold: Int
+  public let prowlers: [FloorProwler]
 
-  public init(fixtures: [FloorFixture], wade: Int) {
+  public init(
+    fixtures: [FloorFixture], wade: Int, hold: Int = 0, prowlers: [FloorProwler] = []
+  ) {
     self.fixtures = fixtures
     self.wade = wade
+    self.hold = hold
+    self.prowlers = prowlers
   }
 
   public static func placed(in maze: Maze, seed: Seed) -> FloorFixtureField {
@@ -27,7 +33,9 @@ public struct FloorFixtureField: Equatable, Sendable {
     let count = min(spots.count, 1 + Int(roll % 3))
     let chests = choose(spots, count: count, rng: rng)
     let water = pond(maze, spots: spots, taken: chests.used, rng: chests.rng)
-    return FloorFixtureField(fixtures: chests.fixtures + water, wade: 0)
+    let prowlers = lurking(spots, taken: chests.used + water.used, rng: water.rng)
+    return FloorFixtureField(
+      fixtures: chests.fixtures + water.fixtures, wade: 0, prowlers: prowlers)
   }
 
   public var holdsSealed: Bool {
@@ -112,7 +120,7 @@ public struct FloorFixtureField: Equatable, Sendable {
 
   public func entered(_ point: CellPoint) -> FloorFixtureField {
     if lake(at: point) {
-      return FloorFixtureField(fixtures: fixtures, wade: FloorFixture.wadeSpan)
+      return copied(wade: FloorFixture.wadeSpan)
     }
     return self
   }
@@ -121,15 +129,118 @@ public struct FloorFixtureField: Equatable, Sendable {
     if wade <= 0 {
       return nil
     }
-    return FloorFixtureField(fixtures: fixtures, wade: wade - 1)
+    return copied(wade: wade - 1)
+  }
+
+  public func hunted(_ runner: CellPoint, in maze: Maze) -> FloorFixtureField {
+    let moved = prowlers.map { step in
+      let next = step.hunted(in: maze, runner: runner)
+      if sealed(at: next.point) {
+        return step
+      }
+      return next
+    }
+    return copied(prowlers: moved)
+  }
+
+  public func encountered(_ runner: CellPoint) -> FloorFixtureField {
+    if hold > 0 {
+      return self
+    }
+    var caught = false
+    let next = prowlers.map { step -> FloorProwler in
+      if step.near(runner) && blinking(step) {
+        caught = true
+        return step.begun()
+      }
+      return step
+    }
+    if !caught {
+      return copied(prowlers: next)
+    }
+    return copied(hold: FloorProwler.fightSpan, prowlers: next)
+  }
+
+  public func performing(in maze: Maze, runner: CellPoint) -> FloorFixtureField? {
+    if hold <= 0 {
+      return nil
+    }
+    let aged = prowlers.map { $0.aged(in: maze, runner: runner) }.filter { !finished($0) }
+    return copied(hold: renewed(aged), prowlers: aged)
+  }
+
+  public func prowler(at point: CellPoint) -> FloorProwler? {
+    for step in prowlers where step.point == point {
+      switch step.mood {
+      case .gone:
+        break
+      case .blink, .fight, .flee:
+        return step
+      }
+    }
+    return nil
+  }
+
+  public func fighting() -> FloorProwler? {
+    for step in prowlers {
+      switch step.mood {
+      case .fight:
+        return step
+      case .blink, .flee, .gone:
+        break
+      }
+    }
+    return nil
   }
 
   public func beginBurst(at point: CellPoint) -> FloorFixtureField {
-    FloorFixtureField(fixtures: fixtures.map { retimed($0, at: point) }, wade: wade)
+    copied(fixtures: fixtures.map { retimed($0, at: point) })
   }
 
   public func ageBurst() -> FloorFixtureField {
-    FloorFixtureField(fixtures: fixtures.map { aged($0) }, wade: wade)
+    copied(fixtures: fixtures.map { aged($0) })
+  }
+
+  private func copied(
+    fixtures: [FloorFixture]? = nil, wade: Int? = nil, hold: Int? = nil,
+    prowlers: [FloorProwler]? = nil
+  ) -> FloorFixtureField {
+    FloorFixtureField(
+      fixtures: fixtures ?? self.fixtures,
+      wade: wade ?? self.wade,
+      hold: hold ?? self.hold,
+      prowlers: prowlers ?? self.prowlers
+    )
+  }
+
+  private func blinking(_ step: FloorProwler) -> Bool {
+    switch step.mood {
+    case .blink:
+      true
+    case .fight, .flee, .gone:
+      false
+    }
+  }
+
+  private func finished(_ step: FloorProwler) -> Bool {
+    switch step.mood {
+    case .gone:
+      true
+    case .blink, .fight, .flee:
+      false
+    }
+  }
+
+  private func renewed(_ aged: [FloorProwler]) -> Int {
+    for step in aged {
+      switch step.mood {
+      case .flee(0):
+        return FloorProwler.fleeSpan
+      case .blink, .fight, .flee, .gone:
+        break
+      }
+    }
+    return hold - 1
   }
 
   private func sealedDistance(_ fixture: FloorFixture, origin: CellPoint) -> Int? {
@@ -216,24 +327,44 @@ public struct FloorFixtureField: Equatable, Sendable {
 
   private static func pond(
     _ maze: Maze, spots: [CellPoint], taken: [CellPoint], rng: SplitMix64
-  ) -> [FloorFixture] {
+  ) -> Pick {
     let (roll, next) = rng.next()
     if !roll.isMultiple(of: 2) {
+      return Pick(fixtures: [], used: [], rng: next)
+    }
+    let open = unused(spots, taken: taken)
+    if open.isEmpty {
+      return Pick(fixtures: [], used: [], rng: next)
+    }
+    let (indexRoll, after) = next.next()
+    let origin = open[Int(indexRoll % UInt64(open.count))]
+    var water = flood(maze, from: origin, blocked: taken + [maze.start])
+    if water.count < 5 {
+      return Pick(fixtures: [], used: [], rng: after)
+    }
+    let stone = dryStone(water)
+    water.removeAll { $0 == stone }
+    let lakes = water.map { FloorFixture(point: $0, kind: .lake, phase: .open) }
+    return Pick(fixtures: lakes, used: water, rng: after)
+  }
+
+  /// 広い階のおよそ 3 分の 1。偶数の抽選は追いかけてくる。
+  private static func lurking(_ spots: [CellPoint], taken: [CellPoint], rng: SplitMix64)
+    -> [FloorProwler]
+  {
+    let (roll, next) = rng.next()
+    if roll % 3 != 0 {
       return []
     }
     let open = unused(spots, taken: taken)
     if open.isEmpty {
       return []
     }
-    let (indexRoll, _) = next.next()
+    let (indexRoll, after) = next.next()
     let origin = open[Int(indexRoll % UInt64(open.count))]
-    var water = flood(maze, from: origin, blocked: taken + [maze.start])
-    if water.count < 5 {
-      return []
-    }
-    let stone = dryStone(water)
-    water.removeAll { $0 == stone }
-    return water.map { FloorFixture(point: $0, kind: .lake, phase: .open) }
+    let (chaseRoll, _) = after.next()
+    let chases = chaseRoll.isMultiple(of: 2)
+    return [FloorProwler(point: origin, chases: chases, mood: .blink)]
   }
 
   /// つながった水面のうち、隣の水面が一番多いマスを石にする。同点は掘り始め側。
