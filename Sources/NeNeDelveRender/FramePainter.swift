@@ -83,31 +83,61 @@ public enum FramePainter {
     }
 
     func wallGlyph(_ world: FloorWorld, point: CellPoint) -> Character {
-      let north = isWall(world, point, column: 0, row: -1)
-      let south = isWall(world, point, column: 0, row: 1)
-      let west = isWall(world, point, column: -1, row: 0)
-      let east = isWall(world, point, column: 1, row: 0)
-      let vertical = north || south
-      let horizontal = west || east
-      if vertical && horizontal {
+      if !touchesOpen(world, point) {
+        return ScreenText.floor
+      }
+      let north = edge(world, point, column: 0, row: -1)
+      let south = edge(world, point, column: 0, row: 1)
+      let west = edge(world, point, column: -1, row: 0)
+      let east = edge(world, point, column: 1, row: 0)
+      if (north || south) && (west || east) {
         return ScreenText.joint
       }
-      if vertical {
+      if north || south {
         return ScreenText.bar
       }
       return ScreenText.dash
     }
 
-    func isWall(_ world: FloorWorld, _ point: CellPoint, column: Int, row: Int) -> Bool {
+    func edge(_ world: FloorWorld, _ point: CellPoint, column: Int, row: Int) -> Bool {
       let next = CellPoint(x: point.x + column, y: point.y + row)
       if !world.walk.maze.span.contains(next) {
         return false
       }
       switch world.walk.maze.tile(at: next) {
-      case .wall:
-        return true
       case .floor, .stairs:
         return false
+      case .wall:
+        return touchesOpen(world, next)
+      }
+    }
+
+    func touchesOpen(_ world: FloorWorld, _ point: CellPoint) -> Bool {
+      var row = -1
+      while row <= 1 {
+        var column = -1
+        while column <= 1 {
+          let beside = column != 0 || row != 0
+          let next = CellPoint(x: point.x + column, y: point.y + row)
+          if beside && isOpen(world, next) {
+            return true
+          }
+          column += 1
+        }
+        row += 1
+      }
+      return false
+    }
+
+    func isOpen(_ world: FloorWorld, _ point: CellPoint) -> Bool {
+      if !world.walk.maze.span.contains(point) {
+        return false
+      }
+      switch world.walk.maze.tile(at: point) {
+      case .wall:
+        return false
+      case .floor, .stairs:
+        return true
       }
     }
 

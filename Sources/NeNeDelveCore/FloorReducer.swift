@@ -6,7 +6,7 @@ public enum FloorReducer {
   public static func resume(launchSeed: Seed, floor: FloorIndex, span: GridSpan, pace: StepPace)
     -> FloorOpening
   {
-    switch MazeFactory.make(kind: .filledGrid, seed: launchSeed.forFloor(floor), span: span) {
+    switch carved(seed: launchSeed.forFloor(floor), span: span) {
     case .tooSmall:
       .tooSmall
     case .maze(let maze):
@@ -24,7 +24,7 @@ public enum FloorReducer {
   public static func nextFloor(_ world: FloorWorld) -> NextFloor {
     let floor = world.course.floor.deeper()
     let seed = world.course.launchSeed.forFloor(floor)
-    switch MazeFactory.make(kind: .filledGrid, seed: seed, span: world.walk.maze.span) {
+    switch carved(seed: seed, span: world.walk.maze.span) {
     case .tooSmall:
       return .stuck
     case .maze(let maze):
@@ -73,6 +73,10 @@ public enum FloorReducer {
       steps: world.walk.steps + 1
     )
     return FloorWorld(course: world.course, walk: walk)
+  }
+
+  private static func carved(seed: Seed, span: GridSpan) -> MazePlan {
+    MazeFactory.make(kind: MazeKind.chosen(seed), seed: seed, span: span)
   }
 
   private static func limit(_ maze: Maze) -> Int {

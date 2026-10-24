@@ -6,7 +6,8 @@ import Testing
 struct FramePainterTests {
   @Test func hudShowsFloorClockSeedAndTheme() {
     let world = opened()
-    let grid = FramePainter.paint(world: world, clock: sampleClock(), theme: .neonGrid, canvas: canvas(for: world))
+    let grid = FramePainter.paint(
+      world: world, clock: sampleClock(), theme: .neonGrid, canvas: canvas(for: world))
     let top = line(grid, row: 0)
     let theme = line(grid, row: 1)
     let shown = top + theme
@@ -35,13 +36,26 @@ struct FramePainterTests {
     #expect(glyph(grid, point: world.walk.explorer.position) == ScreenText.runner)
   }
 
+  @Test func buriedRockStaysBlank() {
+    let plan = MazeFactory.rooms(seed: Seed(raw: 1), span: GridSpan(width: 41, height: 21))
+    guard case .maze(let maze) = plan else {
+      Issue.record("expected a maze")
+      return
+    }
+    let grid = FramePainter.paint(
+      world: world(maze), clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    #expect(blankRock(grid, maze: maze))
+  }
+
   @Test func screenTextKeepsTheTooSmallLine() {
     #expect(ScreenText.tooSmall == "端末が小さすぎる")
     #expect(ScreenText.rejection(.unknownOption) == "不明な起動オプションです")
   }
 
   private func opened() -> FloorWorld {
-    guard case .world(let world) = FloorReducer.begin(launchSeed: Seed(raw: 9), span: GridSpan(width: 11, height: 9))
+    guard
+      case .world(let world) = FloorReducer.begin(
+        launchSeed: Seed(raw: 9), span: GridSpan(width: 11, height: 9))
     else {
       fatalError("the sample span fits a maze")
     }
@@ -49,7 +63,37 @@ struct FramePainterTests {
   }
 
   private func canvas(for world: FloorWorld) -> GridSpan {
-    GridSpan(width: 80, height: world.walk.maze.span.height + ScreenText.hudRows)
+    canvas(forMaze: world.walk.maze)
+  }
+
+  private func canvas(forMaze maze: Maze) -> GridSpan {
+    GridSpan(width: 80, height: maze.span.height + ScreenText.hudRows)
+  }
+
+  private func world(_ maze: Maze) -> FloorWorld {
+    FloorWorld(
+      course: FloorCourse(launchSeed: Seed(raw: 1), floor: .first, pace: .explore),
+      walk: FloorWalk(
+        maze: maze, explorer: Explorer.begin(maze), rng: SplitMix64(seed: Seed(raw: 1)), steps: 0)
+    )
+  }
+
+  private func blankRock(_ grid: CellGrid, maze: Maze) -> Bool {
+    var row = 0
+    while row < maze.span.height {
+      var column = 0
+      while column < maze.span.width {
+        let point = CellPoint(x: column, y: row)
+        if maze.tile(at: point) == .wall
+          && glyph(grid, point: point) == ScreenText.floor
+        {
+          return true
+        }
+        column += 1
+      }
+      row += 1
+    }
+    return false
   }
 
   private func sampleClock() -> HudClock {
