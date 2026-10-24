@@ -20,24 +20,41 @@ struct NeneDelveMain {
     var facing: Direction
   }
 
+  private struct Frame {
+    let world: FloorWorld
+    let along: Double
+  }
+
+  private struct Stage {
+    let columns: Int
+    let span: GridSpan
+  }
+
   private struct Beat {
     var phase: Phase
+    var slice: Int
+    var hold: Int
 
     enum Phase {
-      case run
+      case show
+      case decide
       case turn
-      case move
+      case glide
+      case step
     }
   }
 
-  private enum Cue {
-    case stay(Int32?)
-    case turn(Int32?)
+  private enum Ready {
+    case world(FloorWorld)
+    case skip
+    case stop
   }
 
-  /// 3D の表示拍。世界の一歩は StepPace のまま。
+  /// 3D の表示拍。世界の一歩は StepPace のまま。中間の待ちは静止の待ちと別。
   private enum DepthHold {
-    static let milliseconds = 167
+    static let settled = 167
+    static let slice = 80
+    static let slices = 4
   }
 
   static func main() {
@@ -81,18 +98,18 @@ struct NeneDelveMain {
     let origin = monotonic()
     let play = Play(seed: seed, origin: origin, stage: origin, theme: .neonGrid)
     var state = Loop(world: nil, play: play, view: .plan, facing: .north)
-    var beat = Beat(phase: .run)
+    var beat = Beat(phase: .show, slice: 0, hold: StepPace.explore.milliseconds)
     while true {
       if !steer(terminal.pollKey(), state: &state) {
         return 0
       }
       if state.view == .plan {
-        beat.phase = .run
+        beat.phase = park(beat.phase)
       }
       if let code = frame(&terminal, state: &state, beat: &beat) {
         return code
       }
-      sleepMilliseconds(wait(state))
+      sleepMilliseconds(beat.hold)
     }
   }
 
@@ -119,6 +136,7 @@ struct NeneDelveMain {
   ) -> Int32? {
     guard let size = terminal.columnsAndRows() else {
       terminal.showTooSmall()
+      beat.hold = wait(state)
       return nil
     }
     let fit = ViewportFit.classify(
@@ -129,91 +147,184 @@ struct NeneDelveMain {
     switch fit {
     case .tooSmall:
       terminal.showTooSmall()
+      beat.hold = wait(state)
       return nil
     case .maze(let span):
-      switch beat.phase {
-      case .turn:
-        beat.phase = .move
-        return yaw(&terminal, columns: size.columns, span: span, state: &state)
-      case .move:
-        beat.phase = .run
-        return stride(&terminal, columns: size.columns, span: span, state: &state)
-      case .run:
-        switch cruise(&terminal, columns: size.columns, span: span, state: &state) {
-        case .stay(let code):
-          return code
-        case .turn(let code):
-          beat.phase = .turn
-          return code
-        }
-      }
+      return act(&terminal, span: span, state: &state, beat: &beat)
     }
   }
 
-  private static func cruise(
-    _ terminal: inout TerminalSession, columns: Int, span: GridSpan, state: inout Loop
-  ) -> Cue {
-    let resized = terminal.consumeResize()
-    let before = state.world
-    if !ensure(&state.world, seed: state.play.seed, span: span, resized: resized) {
-      terminal.showTooSmall()
-      return .stay(nil)
+  private static func park(_ phase: Beat.Phase) -> Beat.Phase {
+    switch phase {
+    case .show, .decide, .step:
+      phase
+    case .turn, .glide:
+      .show
     }
-    retarget(&state, before: before)
-    guard var current = state.world else {
-      return .stay(1)
-    }
-    present(&terminal, world: current, columns: columns, state: state)
-    if state.view == .depth && upcoming(current, facing: state.facing) != nil {
-      return .turn(nil)
-    }
-    let seen = current
-    let code = step(&terminal, columns: columns, world: &current, state: &state)
-    state.world = current
-    retarget(&state, before: seen)
-    return .stay(code)
   }
 
-  private static func yaw(
-    _ terminal: inout TerminalSession, columns: Int, span: GridSpan, state: inout Loop
+  private static func act(
+    _ terminal: inout TerminalSession, span: GridSpan, state: inout Loop, beat: inout Beat
   ) -> Int32? {
-    let resized = terminal.consumeResize()
-    let before = state.world
-    if !ensure(&state.world, seed: state.play.seed, span: span, resized: resized) {
-      terminal.showTooSmall()
+    guard let stage = stage(&terminal, span: span, state: state, beat: &beat) else {
       return nil
     }
-    retarget(&state, before: before)
+    switch beat.phase {
+    case .show:
+      return show(&terminal, stage: stage, state: &state, beat: &beat)
+    case .decide:
+      return decide(state, beat: &beat)
+    case .turn:
+      return turn(&terminal, stage: stage, state: &state, beat: &beat)
+    case .glide:
+      return glide(&terminal, stage: stage, state: &state, beat: &beat)
+    case .step:
+      return advance(&terminal, stage: stage, state: &state, beat: &beat)
+    }
+  }
+
+  private static func stage(
+    _ terminal: inout TerminalSession, span: GridSpan, state: Loop, beat: inout Beat
+  ) -> Stage? {
+    guard let columns = terminal.columnsAndRows()?.columns else {
+      terminal.showTooSmall()
+      beat.hold = wait(state)
+      return nil
+    }
+    return Stage(columns: columns, span: span)
+  }
+
+  private static func show(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
+  ) -> Int32? {
+    switch ready(&terminal, stage: stage, state: &state) {
+    case .skip:
+      beat.hold = wait(state)
+      return nil
+    case .stop:
+      return 1
+    case .world(let current):
+      present(
+        &terminal, frame: Frame(world: current, along: 0), columns: stage.columns, state: state)
+      beat.hold = wait(state)
+      beat.phase = .decide
+      return nil
+    }
+  }
+
+  private static func decide(_ state: Loop, beat: inout Beat) -> Int32? {
     guard let current = state.world else {
       return 1
     }
-    if let aimed = upcoming(current, facing: state.facing) {
-      state.facing = aimed
+    beat.hold = 0
+    if state.view == .depth && upcoming(current, facing: state.facing) != nil {
+      beat.phase = .turn
+      return nil
     }
-    present(&terminal, world: current, columns: columns, state: state)
+    if state.view == .depth && translating(current) {
+      beat.slice = 0
+      beat.phase = .glide
+      return nil
+    }
+    beat.phase = .step
     return nil
   }
 
-  private static func stride(
-    _ terminal: inout TerminalSession, columns: Int, span: GridSpan, state: inout Loop
+  private static func turn(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
   ) -> Int32? {
-    let resized = terminal.consumeResize()
-    if !ensure(&state.world, seed: state.play.seed, span: span, resized: resized) {
-      terminal.showTooSmall()
+    switch ready(&terminal, stage: stage, state: &state) {
+    case .skip:
+      beat.hold = wait(state)
+      return nil
+    case .stop:
+      return 1
+    case .world(let current):
+      if let aimed = upcoming(current, facing: state.facing) {
+        state.facing = aimed
+      }
+      present(
+        &terminal, frame: Frame(world: current, along: 0), columns: stage.columns, state: state)
+      beat.hold = DepthHold.settled
+      beat.phase = .decide
       return nil
     }
+  }
+
+  private static func glide(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
+  ) -> Int32? {
+    switch ready(&terminal, stage: stage, state: &state) {
+    case .skip:
+      beat.hold = wait(state)
+      return nil
+    case .stop:
+      return 1
+    case .world(let current):
+      let along = Double(beat.slice + 1) / Double(DepthHold.slices + 1)
+      present(
+        &terminal, frame: Frame(world: current, along: along), columns: stage.columns, state: state)
+      beat.hold = DepthHold.slice
+      if beat.slice + 1 >= DepthHold.slices {
+        beat.phase = .step
+        return nil
+      }
+      beat.slice += 1
+      return nil
+    }
+  }
+
+  private static func advance(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
+  ) -> Int32? {
+    switch ready(&terminal, stage: stage, state: &state) {
+    case .skip:
+      beat.hold = wait(state)
+      return nil
+    case .stop:
+      return 1
+    case .world:
+      return commit(&terminal, stage: stage, state: &state, beat: &beat)
+    }
+  }
+
+  private static func commit(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
+  ) -> Int32? {
     guard var current = state.world else {
       return 1
     }
     let depth = current.course.floor.depth
     let seen = current
-    let code = step(&terminal, columns: columns, world: &current, state: &state)
+    let code = step(&terminal, columns: stage.columns, world: &current, state: &state)
     state.world = current
     retarget(&state, before: seen)
-    if code == nil, let shown = state.world, shown.course.floor.depth == depth {
-      present(&terminal, world: shown, columns: columns, state: state)
-    }
+    beat.phase = .show
+    beat.hold = landed(code, depth: depth, state: state)
     return code
+  }
+
+  private static func landed(_ code: Int32?, depth: Int, state: Loop) -> Int {
+    if code == nil, let shown = state.world, shown.course.floor.depth != depth {
+      return DepthHold.settled
+    }
+    return 0
+  }
+
+  private static func ready(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop
+  ) -> Ready {
+    let resized = terminal.consumeResize()
+    let before = state.world
+    if !ensure(&state.world, seed: state.play.seed, span: stage.span, resized: resized) {
+      terminal.showTooSmall()
+      return .skip
+    }
+    retarget(&state, before: before)
+    guard let current = state.world else {
+      return .stop
+    }
+    return .world(current)
   }
 
   private static func upcoming(_ world: FloorWorld, facing: Direction) -> Direction? {
@@ -237,9 +348,21 @@ struct NeneDelveMain {
     return aimed
   }
 
+  private static func translating(_ world: FloorWorld) -> Bool {
+    let origin = world.walk.explorer.position
+    switch FloorReducer.tick(world) {
+    case .running(let stepped):
+      return stepped.walk.explorer.position != origin
+    case .descended(let onStairs):
+      return onStairs.walk.explorer.position != origin
+    case .stuck:
+      return false
+    }
+  }
+
   private static func wait(_ state: Loop) -> Int {
     if state.view == .depth {
-      return DepthHold.milliseconds
+      return DepthHold.settled
     }
     return state.world?.course.pace.milliseconds ?? StepPace.explore.milliseconds
   }
@@ -280,14 +403,16 @@ struct NeneDelveMain {
   }
 
   private static func present(
-    _ terminal: inout TerminalSession, world: FloorWorld, columns: Int, state: Loop
+    _ terminal: inout TerminalSession, frame: Frame, columns: Int, state: Loop
   ) {
     let canvas = GridSpan(
-      width: columns, height: world.walk.maze.span.height + ScreenText.hudRows)
+      width: columns, height: frame.world.walk.maze.span.height + ScreenText.hudRows)
+    let gaze = Gaze(
+      facing: state.facing, place: frame.world.walk.explorer.position, along: frame.along)
     let grid = FramePainter.paint(
-      world: world,
+      world: frame.world,
       clock: hud(state: state),
-      look: FrameLook(theme: state.play.theme, view: state.view, facing: state.facing),
+      look: FrameLook(theme: state.play.theme, view: state.view, gaze: gaze),
       canvas: canvas
     )
     terminal.present(grid)
@@ -301,7 +426,7 @@ struct NeneDelveMain {
       world = next
       return nil
     case .descended(let onStairs):
-      present(&terminal, world: onStairs, columns: columns, state: state)
+      present(&terminal, frame: Frame(world: onStairs, along: 0), columns: columns, state: state)
       return descend(&world, onStairs: onStairs, state: &state)
     case .stuck:
       report(ScreenText.stuck)

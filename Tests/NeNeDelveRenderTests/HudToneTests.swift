@@ -6,9 +6,11 @@ struct HudToneTests {
   @Test func quietInkStaysReadableOnEveryTheme() {
     for name in themes {
       let palette = ThemePalette.palette(name)
-      let quiet = HudTone.foreground(mark("B", line: "B1F"), palette: palette)
-      let ratio = contrast(quiet, palette.ink.background)
-      #expect(ratio >= 4.5)
+      let frame = HudTone.foreground(mark("=", line: "/==[ B1F ]==/"), palette: palette)
+      let digit = HudTone.foreground(mark("1", line: "/==[ B1F ]==/"), palette: palette)
+      let ground = palette.ink.background
+      #expect(contrast(frame, ground) >= 4.5)
+      #expect(contrast(digit, ground) > contrast(frame, ground))
     }
   }
 

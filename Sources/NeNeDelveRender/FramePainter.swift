@@ -14,11 +14,12 @@ public enum FramePainter {
       clock: clock, floor: world.course.floor, look: look, width: canvas.width)
     job.writeLine(hud.first, row: 0)
     job.writeLine(hud.second, row: 1)
+    job.writeLine(hud.third, row: 2)
     switch look.view {
     case .plan:
       job.writeMaze(world)
     case .depth:
-      var scene = DepthScene(world: world, palette: palette, canvas: canvas, facing: look.facing)
+      var scene = DepthScene(world: world, palette: palette, canvas: canvas, gaze: look.gaze)
       scene.paint(into: &job.cells)
     }
     return CellGrid(span: canvas, cells: job.cells)

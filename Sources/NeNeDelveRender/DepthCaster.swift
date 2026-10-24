@@ -8,7 +8,7 @@ enum DepthCaster {
 
   struct Cast: Equatable {
     let maze: Maze
-    let from: CellPoint
+    let origin: Vec
     let facing: Direction
   }
 
@@ -66,10 +66,10 @@ enum DepthCaster {
     let offset = camera(index, count: count)
     let dirX = heading.x + skew.x * offset
     let dirY = heading.y + skew.y * offset
-    return march(cast.maze, from: cast.from, dirX: dirX, dirY: dirY)
+    return march(cast.maze, from: cast.origin, dirX: dirX, dirY: dirY)
   }
 
-  private static func march(_ maze: Maze, from: CellPoint, dirX: Double, dirY: Double) -> DepthHit {
+  private static func march(_ maze: Maze, from: Vec, dirX: Double, dirY: Double) -> DepthHit {
     let pace = stride(dirX, dirY)
     var cursor = cursor(from, dirX: dirX, dirY: dirY, stride: pace)
     let found = walk(maze, cursor: &cursor, stride: pace)
@@ -86,16 +86,14 @@ enum DepthCaster {
     )
   }
 
-  private static func cursor(_ from: CellPoint, dirX: Double, dirY: Double, stride: Stride)
-    -> Cursor
-  {
-    let posX = Double(from.x) + 0.5
-    let posY = Double(from.y) + 0.5
+  private static func cursor(_ origin: Vec, dirX: Double, dirY: Double, stride: Stride) -> Cursor {
+    let mapX = Int(origin.x.rounded(.down))
+    let mapY = Int(origin.y.rounded(.down))
     return Cursor(
-      mapX: from.x,
-      mapY: from.y,
-      sideX: sideStart(dirX, pos: posX, map: from.x, delta: stride.deltaX),
-      sideY: sideStart(dirY, pos: posY, map: from.y, delta: stride.deltaY)
+      mapX: mapX,
+      mapY: mapY,
+      sideX: sideStart(dirX, pos: origin.x, map: mapX, delta: stride.deltaX),
+      sideY: sideStart(dirY, pos: origin.y, map: mapY, delta: stride.deltaY)
     )
   }
 
