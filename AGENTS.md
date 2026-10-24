@@ -9,7 +9,7 @@ The governing sentence, kept in Japanese so it is not paraphrased into a second 
 
 ## Project identity
 
-- Product: NeNe Delve, a terminal maze screensaver that descends floors. The type B slice runs. Rooms, chests, and the other themes do not.
+- Product: NeNe Delve, a terminal maze screensaver that descends floors. Type A and type B run. Chests and the other themes do not.
 - Language / UI: Swift / ANSI terminal
 - Package root: `Package.swift` (SwiftPM only)
 - Done: `make check`

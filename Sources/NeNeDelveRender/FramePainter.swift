@@ -83,50 +83,70 @@ public enum FramePainter {
     }
 
     func wallGlyph(_ world: FloorWorld, point: CellPoint) -> Character {
-      if !touchesOpen(world, point) {
-        return ScreenText.floor
+      let north = openSide(world, point, column: 0, row: -1)
+      let south = openSide(world, point, column: 0, row: 1)
+      let west = openSide(world, point, column: -1, row: 0)
+      let east = openSide(world, point, column: 1, row: 0)
+      let facing = faceMark(north: north, south: south, west: west, east: east)
+      if facing != ScreenText.floor {
+        return facing
       }
-      let north = edge(world, point, column: 0, row: -1)
-      let south = edge(world, point, column: 0, row: 1)
-      let west = edge(world, point, column: -1, row: 0)
-      let east = edge(world, point, column: 1, row: 0)
+      if tightCorner(world, point) {
+        return ScreenText.joint
+      }
+      return ScreenText.floor
+    }
+
+    func faceMark(north: Bool, south: Bool, west: Bool, east: Bool) -> Character {
       if (north || south) && (west || east) {
         return ScreenText.joint
       }
-      if north || south {
+      if west || east {
         return ScreenText.bar
       }
-      return ScreenText.dash
+      if north || south {
+        return ScreenText.dash
+      }
+      return ScreenText.floor
     }
 
-    func edge(_ world: FloorWorld, _ point: CellPoint, column: Int, row: Int) -> Bool {
-      let next = CellPoint(x: point.x + column, y: point.y + row)
-      if !world.walk.maze.span.contains(next) {
+    func openSide(_ world: FloorWorld, _ point: CellPoint, column: Int, row: Int) -> Bool {
+      isOpen(world, CellPoint(x: point.x + column, y: point.y + row))
+    }
+
+    func tightCorner(_ world: FloorWorld, _ point: CellPoint) -> Bool {
+      if diagonalCorner(world, point, column: -1, row: -1) {
+        return true
+      }
+      if diagonalCorner(world, point, column: 1, row: -1) {
+        return true
+      }
+      if diagonalCorner(world, point, column: -1, row: 1) {
+        return true
+      }
+      return diagonalCorner(world, point, column: 1, row: 1)
+    }
+
+    func diagonalCorner(_ world: FloorWorld, _ point: CellPoint, column: Int, row: Int) -> Bool {
+      let across = CellPoint(x: point.x + column, y: point.y + row)
+      if !isOpen(world, across) {
         return false
       }
-      switch world.walk.maze.tile(at: next) {
+      let alongX = CellPoint(x: point.x + column, y: point.y)
+      let alongY = CellPoint(x: point.x, y: point.y + row)
+      return isWall(world, alongX) && isWall(world, alongY)
+    }
+
+    func isWall(_ world: FloorWorld, _ point: CellPoint) -> Bool {
+      if !world.walk.maze.span.contains(point) {
+        return false
+      }
+      switch world.walk.maze.tile(at: point) {
+      case .wall:
+        return true
       case .floor, .stairs:
         return false
-      case .wall:
-        return touchesOpen(world, next)
       }
-    }
-
-    func touchesOpen(_ world: FloorWorld, _ point: CellPoint) -> Bool {
-      var row = -1
-      while row <= 1 {
-        var column = -1
-        while column <= 1 {
-          let beside = column != 0 || row != 0
-          let next = CellPoint(x: point.x + column, y: point.y + row)
-          if beside && isOpen(world, next) {
-            return true
-          }
-          column += 1
-        }
-        row += 1
-      }
-      return false
     }
 
     func isOpen(_ world: FloorWorld, _ point: CellPoint) -> Bool {
