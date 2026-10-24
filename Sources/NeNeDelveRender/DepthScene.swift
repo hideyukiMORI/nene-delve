@@ -77,9 +77,6 @@ struct DepthScene {
     if band.row > band.bottom {
       return ground(column: column, row: band.row, viewHeight: viewHeight)
     }
-    if band.row == band.top || band.row == band.bottom {
-      return seam(band.hit)
-    }
     return fill(band.hit)
   }
 
@@ -91,13 +88,6 @@ struct DepthScene {
   private func fill(_ hit: DepthHit) -> Cell {
     let tone = DepthTone.face(paint(hit), vertical: hit.vertical)
     return Cell(glyph: " ", foreground: tone, background: tone)
-  }
-
-  private func seam(_ hit: DepthHit) -> Cell {
-    let tone = DepthTone.face(paint(hit), vertical: hit.vertical)
-    return Cell(
-      glyph: ScreenText.dash, foreground: DepthTone.edge(paint(hit), vertical: hit.vertical),
-      background: tone)
   }
 
   private func paint(_ hit: DepthHit) -> Rgb {
