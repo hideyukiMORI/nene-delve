@@ -47,6 +47,30 @@ struct FramePainterTests {
     #expect(blankRock(grid, maze: maze))
   }
 
+  @Test func aRectangularRoomIsOneFrame() {
+    let maze = rectangle()
+    let grid = FramePainter.paint(
+      world: world(maze), clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    #expect(glyph(grid, point: CellPoint(x: 2, y: 2)) == ScreenText.joint)
+    #expect(glyph(grid, point: CellPoint(x: 4, y: 2)) == ScreenText.dash)
+    #expect(glyph(grid, point: CellPoint(x: 2, y: 4)) == ScreenText.bar)
+    #expect(glyph(grid, point: CellPoint(x: 8, y: 2)) == ScreenText.joint)
+    #expect(glyph(grid, point: CellPoint(x: 1, y: 2)) == ScreenText.floor)
+    #expect(glyph(grid, point: CellPoint(x: 2, y: 1)) == ScreenText.floor)
+    #expect(skinMatches(grid, maze: maze))
+  }
+
+  @Test func carvedRoomsKeepASingleSkin() {
+    let plan = MazeFactory.rooms(seed: Seed(raw: 1), span: GridSpan(width: 41, height: 21))
+    guard case .maze(let maze) = plan else {
+      Issue.record("expected a maze")
+      return
+    }
+    let grid = FramePainter.paint(
+      world: world(maze), clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    #expect(skinMatches(grid, maze: maze))
+  }
+
   @Test func screenTextKeepsTheTooSmallLine() {
     #expect(ScreenText.tooSmall == "端末が小さすぎる")
     #expect(ScreenText.rejection(.unknownOption) == "不明な起動オプションです")
@@ -76,6 +100,77 @@ struct FramePainterTests {
       walk: FloorWalk(
         maze: maze, explorer: Explorer.begin(maze), rng: SplitMix64(seed: Seed(raw: 1)), steps: 0)
     )
+  }
+
+  private func rectangle() -> Maze {
+    let span = GridSpan(width: 11, height: 9)
+    var tiles = Array(repeating: Tile.wall, count: span.count)
+    var row = 3
+    while row <= 6 {
+      var column = 3
+      while column <= 7 {
+        tiles[span.offset(CellPoint(x: column, y: row))] = .floor
+        column += 1
+      }
+      row += 1
+    }
+    let stairs = CellPoint(x: 5, y: 5)
+    tiles[span.offset(stairs)] = .stairs
+    let ends = MazeEnds(start: CellPoint(x: 3, y: 3), stairs: stairs)
+    return Maze(span: span, tiles: tiles, ends: ends, kind: .rooms)
+  }
+
+  private func skinMatches(_ grid: CellGrid, maze: Maze) -> Bool {
+    var row = 0
+    while row < maze.span.height {
+      var column = 0
+      while column < maze.span.width {
+        let point = CellPoint(x: column, y: row)
+        if maze.tile(at: point) == .wall && !skinAgrees(grid, maze: maze, point: point) {
+          return false
+        }
+        column += 1
+      }
+      row += 1
+    }
+    return true
+  }
+
+  private func skinAgrees(_ grid: CellGrid, maze: Maze, point: CellPoint) -> Bool {
+    let mark = glyph(grid, point: point)
+    if touchesSkin(maze, point) {
+      return mark == ScreenText.joint || mark == ScreenText.bar || mark == ScreenText.dash
+    }
+    return mark == ScreenText.floor
+  }
+
+  private func touchesSkin(_ maze: Maze, _ point: CellPoint) -> Bool {
+    var row = -1
+    while row <= 1 {
+      var column = -1
+      while column <= 1 {
+        let beside = column != 0 || row != 0
+        let next = CellPoint(x: point.x + column, y: point.y + row)
+        if beside && openTile(maze, next) {
+          return true
+        }
+        column += 1
+      }
+      row += 1
+    }
+    return false
+  }
+
+  private func openTile(_ maze: Maze, _ point: CellPoint) -> Bool {
+    if !maze.span.contains(point) {
+      return false
+    }
+    switch maze.tile(at: point) {
+    case .wall:
+      return false
+    case .floor, .stairs:
+      return true
+    }
   }
 
   private func blankRock(_ grid: CellGrid, maze: Maze) -> Bool {

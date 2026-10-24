@@ -10,17 +10,17 @@
 | Phase 0 言語の実測 | 2026-10-23 に実施。抜粋は `docs/quality/phase0-results.json` |
 | Phase 1 文書とゲートの足場 | `make check` が終了コード 0（2026-10-23、この作業木） |
 | Phase 2 negative proof | `docs/quality/gate-proofs.md` に記録した規則だけを active にした |
-| Phase 3 縦切り 1 本 | タイプ A（部屋と通路）とタイプ B が階のシードで選ばれる。壁は部屋の縁、踏破は `.`。宝箱とテーマ切替はまだ無い |
+| Phase 3 縦切り 1 本 | タイプ A（部屋と通路）とタイプ B が階のシードで選ばれる。壁は開いた床に接する一筆、踏破は `.`。宝箱とテーマ切替はまだ無い |
 
 ## 動くもの
 
-- 2026-10-24 13:43 に `make check` は終了コード 0。内訳は unittest 24 件、`conformance: ok`、swift-format、SwiftLint 0 件（51 files）、Swift Testing（Core 19、Render 6、Terminal 3）、`swift build -Xswiftc -warnings-as-errors` 成功
+- 2026-10-24 13:56 に `make check` は終了コード 0。内訳は unittest 24 件、`conformance: ok`、swift-format、SwiftLint 0 件（51 files）、Swift Testing（Core 19、Render 8、Terminal 3）、`swift build -Xswiftc -warnings-as-errors` 成功
 - 同じ実行で `swift test -Xswiftc -warnings-as-errors` は終了コード 0
 - 端末でないとき、実行ファイルは `端末ではありません` を 1 行出して終了コード 1。不明な起動オプションは `不明な起動オプションです` で終了コード 1
 - 80 列 24 行の疑似端末で `--seed 1` を 6 秒見ると、HUD 1 行に階層・通算・この階・日時・シード・`NEON GRID` が出て、壁は `+` `-` `|`、踏んだ床は `.`、走者は `@`。`q` で終了コード 0
 - 同じ大きさでシード `18446744073709551615` は 1 行目に全桁が出て、`NEON GRID` は 2 行目。40 列 16 行では日時とシードが 2 行目に欠けずに出る
 - 一歩は 5×5 で 80ms、79×21 で 28ms
-- `--seed 1` と `--seed 7` の 1 階は部屋と通路。80 列 24 行と 110 列 36 行で、部屋の縁、踏破の `.`、白地の階段、走者を確認した。`q` で終了コード 0
+- `--seed 1` と `--seed 7` の 1 階は部屋と通路。13:55 の 80 列 24 行と 110 列 36 行で、部屋は一筆の枠、踏破は `.`、階段は白地、走者は `@`。厚い岩の `+++++` は消えた。`--seed 9` の升目も `+` `-` `|` のまま。`q` で終了コード 0
 - PR #2 は `MERGED`（`mergedAt` `2026-10-23T16:10:28Z`、merge commit `c4834cf084b241a6eccbc7de6cb2e75e7bf2d700`）。Issue #1 は `CLOSED`（`closedAt` `2026-10-23T16:10:30Z`）
 
 ## 動かないもの

@@ -100,4 +100,4 @@ Waivers: none | WVR-NNNN
 ## 6. いまの状況
 
 現在のタスクは [docs/todo/current.md](docs/todo/current.md)。GitHub Issue が正で、そこは要約。
-タイプ B の縦切りは起動する。タイプ A と演出はまだ無い。
+タイプ A とタイプ B は起動する。宝箱とテーマ切替はまだ無い。詳細は `docs/todo/current.md`。
