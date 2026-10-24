@@ -26,4 +26,4 @@
 
 ## 次の 1 手
 
-製品の振る舞い（迷路、描画、端末）は別の Issue で足す。PR #2 は Ready である。マージは施主が行う。この要約の push は CI をもう一度起動する。
+2026-10-24 12:40 JST に読み戻した。PR #2 は `MERGED`（`mergedAt` `2026-10-23T16:10:28Z`、merge commit `c4834cf084b241a6eccbc7de6cb2e75e7bf2d700`）。Issue #1 は `CLOSED`（`closedAt` `2026-10-23T16:10:30Z`）。製品の振る舞い（迷路、描画、端末）はまだ無く、別の Issue で足す。Phase 3 の実装はこの要約の変更に含めない。
