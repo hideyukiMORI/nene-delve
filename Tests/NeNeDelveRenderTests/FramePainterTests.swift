@@ -176,7 +176,7 @@ struct FramePainterTests {
     let shown = column(grid, at: grid.span.width / 2)
     let frame = picture(grid)
     #expect(shown.contains(">"))
-    #expect(frame.contains("-"))
+    #expect(!frame.contains("-"))
     #expect(!frame.contains("#"))
     #expect(!frame.contains("%"))
     #expect(!frame.contains("@"))
