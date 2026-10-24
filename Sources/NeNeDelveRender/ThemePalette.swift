@@ -24,13 +24,14 @@ public struct ThemePalette: Equatable, Sendable {
     name: .neonGrid,
     ink: ThemeInk(
       background: Rgb(red: 0, green: 0, blue: 0),
-      wall: Rgb(red: 0, green: 255, blue: 255),
-      floor: Rgb(red: 0, green: 40, blue: 48),
-      runner: Rgb(red: 255, green: 0, blue: 255)
+      wall: Rgb(red: 0, green: 150, blue: 170),
+      floor: Rgb(red: 120, green: 255, blue: 245),
+      runner: Rgb(red: 255, green: 70, blue: 255)
     ),
     accent: ThemeAccent(
       stairs: Rgb(red: 255, green: 255, blue: 255),
-      hud: Rgb(red: 0, green: 255, blue: 255)
+      hud: Rgb(red: 0, green: 255, blue: 255),
+      chip: Rgb(red: 72, green: 0, blue: 84)
     )
   )
 }

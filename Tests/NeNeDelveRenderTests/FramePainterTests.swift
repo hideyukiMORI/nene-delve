@@ -9,14 +9,30 @@ struct FramePainterTests {
     let grid = FramePainter.paint(world: world, clock: sampleClock(), theme: .neonGrid, canvas: canvas(for: world))
     let top = line(grid, row: 0)
     let theme = line(grid, row: 1)
-    #expect(top.contains("B1F"))
-    #expect(top.contains("total 01:01:01"))
-    #expect(top.contains("stage 00:00:05"))
-    #expect(top.contains("2026-10-24 12:40:00"))
-    #expect(top.contains("seed 9"))
-    #expect(theme.contains("NEON GRID"))
+    let shown = top + theme
+    #expect(shown.contains("B1F"))
+    #expect(shown.contains("total 01:01:01"))
+    #expect(shown.contains("stage 00:00:05"))
+    #expect(shown.contains("2026-10-24 12:40:00"))
+    #expect(shown.contains("seed 9"))
+    #expect(shown.contains("NEON GRID"))
     #expect(glyph(grid, point: world.walk.explorer.position) == ScreenText.runner)
     #expect(glyph(grid, point: world.walk.maze.stairs) == ScreenText.stairs)
+    #expect(grid.cell(column: 0, row: ScreenText.hudRows).glyph == ScreenText.joint)
+  }
+
+  @Test func aStepLeavesATrailOnTheFloor() {
+    var world = opened()
+    let start = world.walk.explorer.position
+    guard case .running(let next) = FloorReducer.tick(world) else {
+      Issue.record("the first step stays on this floor")
+      return
+    }
+    world = next
+    let grid = FramePainter.paint(
+      world: world, clock: sampleClock(), theme: .neonGrid, canvas: canvas(for: world))
+    #expect(glyph(grid, point: start) == ScreenText.trail)
+    #expect(glyph(grid, point: world.walk.explorer.position) == ScreenText.runner)
   }
 
   @Test func screenTextKeepsTheTooSmallLine() {

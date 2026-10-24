@@ -1,6 +1,6 @@
 public enum FloorReducer {
   public static func begin(launchSeed: Seed, span: GridSpan) -> FloorOpening {
-    resume(launchSeed: launchSeed, floor: .first, span: span, pace: .explore)
+    resume(launchSeed: launchSeed, floor: .first, span: span, pace: StepPace.forSpan(span))
   }
 
   public static func resume(launchSeed: Seed, floor: FloorIndex, span: GridSpan, pace: StepPace)
