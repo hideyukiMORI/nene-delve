@@ -80,13 +80,13 @@ struct NeneDelveMain {
       terminal.showTooSmall()
       return nil
     case .maze(let span):
-      return draw(&terminal, span: span, state: &state)
+      return draw(&terminal, columns: size.columns, span: span, state: &state)
     }
   }
 
-  private static func draw(_ terminal: inout TerminalSession, span: GridSpan, state: inout Loop)
-    -> Int32?
-  {
+  private static func draw(
+    _ terminal: inout TerminalSession, columns: Int, span: GridSpan, state: inout Loop
+  ) -> Int32? {
     let resized = terminal.consumeResize()
     if !ensure(&state.world, seed: state.seed, span: span, resized: resized) {
       terminal.showTooSmall()
@@ -95,8 +95,8 @@ struct NeneDelveMain {
     guard var current = state.world else {
       return 1
     }
-    present(&terminal, world: current, state: state)
-    let code = step(&terminal, world: &current, state: &state)
+    present(&terminal, world: current, columns: columns, state: state)
+    let code = step(&terminal, columns: columns, world: &current, state: &state)
     state.world = current
     return code
   }
@@ -108,7 +108,7 @@ struct NeneDelveMain {
       return true
     }
     let floor = world?.course.floor ?? FloorIndex.first
-    let pace = world?.course.pace ?? .explore
+    let pace = StepPace.forSpan(span)
     switch FloorReducer.resume(launchSeed: seed, floor: floor, span: span, pace: pace) {
     case .tooSmall:
       return false
@@ -118,11 +118,11 @@ struct NeneDelveMain {
     }
   }
 
-  private static func present(_ terminal: inout TerminalSession, world: FloorWorld, state: Loop) {
+  private static func present(
+    _ terminal: inout TerminalSession, world: FloorWorld, columns: Int, state: Loop
+  ) {
     let canvas = GridSpan(
-      width: world.walk.maze.span.width,
-      height: world.walk.maze.span.height + ScreenText.hudRows
-    )
+      width: columns, height: world.walk.maze.span.height + ScreenText.hudRows)
     let grid = FramePainter.paint(
       world: world,
       clock: hud(state: state),
@@ -133,14 +133,14 @@ struct NeneDelveMain {
   }
 
   private static func step(
-    _ terminal: inout TerminalSession, world: inout FloorWorld, state: inout Loop
+    _ terminal: inout TerminalSession, columns: Int, world: inout FloorWorld, state: inout Loop
   ) -> Int32? {
     switch FloorReducer.tick(world) {
     case .running(let next):
       world = next
       return nil
     case .descended(let onStairs):
-      present(&terminal, world: onStairs, state: state)
+      present(&terminal, world: onStairs, columns: columns, state: state)
       return descend(&world, onStairs: onStairs, state: &state)
     case .stuck:
       report(ScreenText.stuck)

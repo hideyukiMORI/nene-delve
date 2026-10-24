@@ -6,8 +6,11 @@ public enum ScreenText {
   public static let notATerminal = "端末ではありません"
   public static let terminalRejected = "端末を初期化できません"
   public static let stuck = "階段にたどり着けません"
-  public static let wall: Character = "#"
+  public static let joint: Character = "+"
+  public static let bar: Character = "|"
+  public static let dash: Character = "-"
   public static let floor: Character = " "
+  public static let trail: Character = "."
   public static let runner: Character = "@"
   public static let stairs: Character = ">"
 
@@ -26,14 +29,6 @@ public enum ScreenText {
 
   public static func floorLabel(_ floor: FloorIndex) -> String {
     "B\(floor.depth)F"
-  }
-
-  public static func hudLine(_ clock: HudClock, floor: FloorIndex) -> String {
-    let total = DigitText.elapsed(clock.elapsed.totalSeconds)
-    let stage = DigitText.elapsed(clock.elapsed.stageSeconds)
-    let when = DigitText.date(clock.date) + " " + DigitText.clock(clock.time)
-    let head = floorLabel(floor) + "  total " + total + "  stage " + stage
-    return head + "  " + when + "  seed " + String(clock.seed.raw)
   }
 
   public static func themeLine(_ theme: ThemeName) -> String {
