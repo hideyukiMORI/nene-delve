@@ -65,10 +65,10 @@ CI が呼ぶのは `make check` だけである。検査を足すときは、先
 証拠は [quality/gate-proofs.md](quality/gate-proofs.md) に記録する。
 ゲートは `python3 -m unittest discover -s eng -p '*_test.py'` を `eng/conformance.py` の前に呼ぶ。
 
-振る舞いの Swift テストはまだ無い。2026-10-23 に `swift test -Xswiftc -warnings-as-errors` は
+2026-10-23 に、テストが無い状態の `swift test -Xswiftc -warnings-as-errors` は
 `error: no tests found; create a target in the 'Tests' directory` で失敗した。
-そのため `make check` は `swift test` を呼ばない。`Tests/` に Swift ファイルが現れたら、
-`check` が `test` に依存し、レシピが `swift test -Xswiftc -warnings-as-errors` を含むことをこの規則が見る。
+2026-10-24 に `Tests/` へ Swift Testing を足した。`make check` は `test` に依存し、
+レシピは `swift test -Xswiftc -warnings-as-errors` である。
 テストが無いのに `check` が `test` に依存しているときも落とす。
 
 - 機械強制: **active**
@@ -240,7 +240,7 @@ Swift ソースの該当語には、同じ行以降に `#` と数字が要る。
 | QLT-004 | active | `swift-format lint --strict` |
 | QLT-005 | planned | QLT-001 と二重にしない |
 | QLT-006 | planned | 個別規則に分けてあり、この ID はレビュー |
-| QLT-007 | active | unittest の結線。Swift のテストターゲットはまだ無い |
+| QLT-007 | active | unittest の結線。Tests があるとき `swift test -Xswiftc -warnings-as-errors` |
 | QLT-008 | planned | レビュー |
 | QLT-009 | planned | 閾値は未設定 |
 | QLT-010 | 不能 | PR の手続き |
@@ -270,7 +270,7 @@ Swift ソースの該当語には、同じ行以降に `#` と数字が要る。
 | 整形 | 文字列としての正本 | `eng/format.sh`（`swift-format lint --strict`） |
 | 静的解析 | 強制アンラップと複雑度 | `eng/lint.sh`（SwiftLint `--strict` と `.swiftlint.yml` の `only_rules`） |
 | コンパイル | 型、網羅性の一部、警告はエラー | `swift build -Xswiftc -warnings-as-errors` |
-| 振る舞いの単体テスト | 置いていない | `swift test` はテストターゲットが無く終了コード 1。QLT-007 が結線を保留している |
+| 振る舞いの単体テスト | Swift Testing | `swift test -Xswiftc -warnings-as-errors`（QLT-007） |
 | カバレッジ | 置いていない | 閾値は未設定（QLT-009） |
 | 依存 | 実行時は 0 | QLT-011。lock ファイルは無いのが正しい |
 
