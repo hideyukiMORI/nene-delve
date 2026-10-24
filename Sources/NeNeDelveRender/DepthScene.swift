@@ -15,8 +15,9 @@ struct DepthScene {
       maze: world.walk.maze, from: world.walk.explorer.position, facing: facing)
     let hits = DepthCaster.columns(cast, count: canvas.width)
     let distances = draw(hits, height: height, into: &cells)
+    edges(hits, height: height, into: &cells)
+    stair(hits, height: height, into: &cells)
     stampMarks(distances, height: height, into: &cells)
-    reticle(height: height, into: &cells)
   }
 
   private struct Slice {
@@ -58,12 +59,10 @@ struct DepthScene {
   private func draw(_ hit: DepthHit, column: Int, viewHeight: Int, into cells: inout [Cell])
     -> Double
   {
-    let lines = min(viewHeight, Int(Double(viewHeight) / hit.distance))
-    let top = max(0, (viewHeight - lines) / 2)
-    let bottom = min(viewHeight - 1, top + max(lines, 1) - 1)
+    let plane = DepthPlane.across(hit.distance, viewHeight: viewHeight)
     var row = 0
     while row < viewHeight {
-      let band = Slice(hit: hit, row: row, top: top, bottom: bottom)
+      let band = Slice(hit: hit, row: row, top: plane.top, bottom: plane.bottom)
       put(
         slice(band, column: column, viewHeight: viewHeight), column: column, row: row, into: &cells)
       row += 1
@@ -78,23 +77,30 @@ struct DepthScene {
     if band.row > band.bottom {
       return ground(column: column, row: band.row, viewHeight: viewHeight)
     }
-    return wall(band.hit)
+    if band.row == band.top || band.row == band.bottom {
+      return seam(band.hit)
+    }
+    return fill(band.hit)
   }
 
   private func sky() -> Cell {
-    Cell(glyph: " ", foreground: palette.ink.wall, background: palette.ink.background)
+    let tone = DepthTone.ceiling(palette.ink.wall)
+    return Cell(glyph: " ", foreground: tone, background: tone)
   }
 
-  private func wall(_ hit: DepthHit) -> Cell {
-    let color = face(hit).dimmed(shade(hit))
-    if hit.tile == .stairs {
-      return Cell(glyph: ScreenText.stairs, foreground: palette.ink.background, background: color)
-    }
+  private func fill(_ hit: DepthHit) -> Cell {
+    let tone = DepthTone.face(paint(hit), vertical: hit.vertical)
+    return Cell(glyph: " ", foreground: tone, background: tone)
+  }
+
+  private func seam(_ hit: DepthHit) -> Cell {
+    let tone = DepthTone.face(paint(hit), vertical: hit.vertical)
     return Cell(
-      glyph: DepthShade.glyph(hit.distance), foreground: color, background: palette.ink.background)
+      glyph: ScreenText.dash, foreground: DepthTone.edge(paint(hit), vertical: hit.vertical),
+      background: tone)
   }
 
-  private func face(_ hit: DepthHit) -> Rgb {
+  private func paint(_ hit: DepthHit) -> Rgb {
     switch hit.tile {
     case .stairs:
       palette.accent.stairs
@@ -103,30 +109,89 @@ struct DepthScene {
     }
   }
 
-  private func shade(_ hit: DepthHit) -> Int {
-    let raw = Int(240 / max(hit.distance, 0.4))
-    let capped = min(100, max(22, raw))
-    if hit.vertical {
-      return capped
-    }
-    return capped * 4 / 5
-  }
-
   private func ground(column: Int, row: Int, viewHeight: Int) -> Cell {
     guard let point = sample(column: column, row: row, viewHeight: viewHeight) else {
       return sky()
     }
     if world.fixtures.lake(at: point) {
-      let phase = world.walk.steps + point.x + point.y
-      return Cell(
-        glyph: ScreenText.ripple(phase), foreground: palette.accent.mark.foam,
-        background: palette.accent.mark.water)
+      return lake(column: column, row: row, viewHeight: viewHeight)
     }
-    let percent = 28 + (row * 55 / max(viewHeight, 1))
-    let glyph: Character = row.isMultiple(of: 2) ? "." : " "
+    let tone = DepthTone.floor(
+      palette.ink.floor, band: DepthTone.FloorBand.at(row: row, viewHeight: viewHeight))
+    return Cell(glyph: " ", foreground: tone, background: tone)
+  }
+
+  private func lake(column: Int, row: Int, viewHeight: Int) -> Cell {
+    let tone = DepthTone.water(palette.accent.mark.water)
+    if shore(column: column, row: row, viewHeight: viewHeight) {
+      return Cell(glyph: ScreenText.dash, foreground: palette.accent.mark.foam, background: tone)
+    }
+    return Cell(glyph: " ", foreground: tone, background: tone)
+  }
+
+  private func shore(column: Int, row: Int, viewHeight: Int) -> Bool {
+    guard let above = sample(column: column, row: row - 1, viewHeight: viewHeight) else {
+      return false
+    }
+    return !world.fixtures.lake(at: above)
+  }
+
+  private func edges(_ hits: [DepthHit], height: Int, into cells: inout [Cell]) {
+    var column = 1
+    while column < hits.count {
+      if hits[column].vertical != hits[column - 1].vertical {
+        bar(hits[column], column: column, viewHeight: height, into: &cells)
+      }
+      column += 1
+    }
+  }
+
+  private func bar(_ hit: DepthHit, column: Int, viewHeight: Int, into cells: inout [Cell]) {
+    let plane = DepthPlane.across(hit.distance, viewHeight: viewHeight)
+    var row = plane.top + 1
+    while row < plane.bottom {
+      put(post(hit), column: column, row: row, into: &cells)
+      row += 1
+    }
+  }
+
+  private func post(_ hit: DepthHit) -> Cell {
+    let tone = DepthTone.face(paint(hit), vertical: hit.vertical)
     return Cell(
-      glyph: glyph, foreground: palette.ink.floor.dimmed(percent),
-      background: palette.ink.background)
+      glyph: ScreenText.bar, foreground: DepthTone.edge(paint(hit), vertical: hit.vertical),
+      background: tone)
+  }
+
+  private func stair(_ hits: [DepthHit], height: Int, into cells: inout [Cell]) {
+    guard let column = stairColumn(hits) else {
+      return
+    }
+    let plane = DepthPlane.across(hits[column].distance, viewHeight: height)
+    if plane.bottom < plane.top {
+      return
+    }
+    let tone = DepthTone.face(palette.accent.stairs, vertical: hits[column].vertical)
+    put(
+      Cell(glyph: ScreenText.stairs, foreground: palette.ink.background, background: tone),
+      column: column, row: (plane.top + plane.bottom) / 2, into: &cells)
+  }
+
+  private func stairColumn(_ hits: [DepthHit]) -> Int? {
+    var chosen: Int?
+    var gap = Int.max
+    let center = hits.count / 2
+    var column = 0
+    while column < hits.count {
+      if hits[column].tile == .stairs {
+        let next = abs(column - center)
+        if chosen == nil || next < gap {
+          chosen = column
+          gap = next
+        }
+      }
+      column += 1
+    }
+    return chosen
   }
 
   private func sample(column: Int, row: Int, viewHeight: Int) -> CellPoint? {
@@ -252,21 +317,6 @@ struct DepthScene {
       return cells[canvas.offset(point)].background
     }
     return palette.ink.background
-  }
-
-  private func reticle(height: Int, into cells: inout [Cell]) {
-    let column = canvas.width / 2
-    let row = height / 2
-    let point = CellPoint(x: column, y: row + ScreenText.hudRows)
-    if !canvas.contains(point) {
-      return
-    }
-    let current = cells[canvas.offset(point)]
-    if current.glyph != " " && current.glyph != "." {
-      return
-    }
-    cells[canvas.offset(point)] = Cell(
-      glyph: "+", foreground: palette.ink.runner, background: current.background)
   }
 
   private func put(_ cell: Cell, column: Int, row: Int, into cells: inout [Cell]) {

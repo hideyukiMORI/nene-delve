@@ -11,14 +11,17 @@ struct FramePainterTests {
     let top = line(grid, row: 0)
     let theme = line(grid, row: 1)
     let shown = top + theme
-    #expect(shown.contains("//FLR:B1F"))
-    #expect(shown.contains("UP:01:01:01"))
-    #expect(shown.contains("STG:00:00:05"))
+    #expect(shown.contains("B1F"))
+    #expect(shown.contains("01:01:01"))
+    #expect(shown.contains("00:00:05"))
     #expect(shown.contains("2026-10-24 12:40:00"))
-    #expect(shown.contains("SEED:9"))
-    #expect(shown.contains("SYS:NEON GRID"))
-    #expect(shown.contains("MODE:2D"))
-    #expect(grid.cell(column: 0, row: 0).background == ThemePalette.palette(.neonGrid).accent.chip)
+    #expect(shown.contains("(9)"))
+    #expect(shown.contains("NEON GRID"))
+    #expect(top.hasSuffix("2D"))
+    #expect(!shown.contains("SEED:"))
+    #expect(!shown.contains("MODE:"))
+    #expect(
+      grid.cell(column: 0, row: 0).background == ThemePalette.palette(.neonGrid).ink.background)
     #expect(glyph(grid, point: world.walk.explorer.position) == ScreenText.runner)
     #expect(glyph(grid, point: world.walk.maze.stairs) == ScreenText.stairs)
     #expect(grid.cell(column: 0, row: ScreenText.hudRows).glyph == ScreenText.joint)
@@ -163,15 +166,18 @@ struct FramePainterTests {
   }
 
   @Test func depthShowsTheStairsAheadInsteadOfTheMap() {
-    let maze = hall()
+    let maze = nearHall()
     let grid = FramePainter.paint(
       world: world(maze), clock: sampleClock(),
       look: FrameLook(theme: .neonGrid, view: .depth, facing: .east), canvas: canvas(forMaze: maze))
     let shown = column(grid, at: grid.span.width / 2)
     let frame = picture(grid)
     #expect(shown.contains(">"))
-    #expect(frame.contains("#") || frame.contains("%"))
+    #expect(frame.contains("-"))
+    #expect(!frame.contains("#"))
+    #expect(!frame.contains("%"))
     #expect(!frame.contains("@"))
+    #expect(!frame.contains("+"))
   }
 
   @Test func depthShowsAChestAndAProwlerAhead() {
@@ -186,6 +192,18 @@ struct FramePainterTests {
     let shown = picture(grid)
     #expect(shown.contains("$"))
     #expect(shown.contains("&"))
+  }
+
+  private func nearHall() -> Maze {
+    let span = GridSpan(width: 15, height: 11)
+    var tiles = Array(repeating: Tile.wall, count: span.count)
+    tiles[span.offset(CellPoint(x: 1, y: 5))] = .floor
+    tiles[span.offset(CellPoint(x: 2, y: 5))] = .floor
+    let stairs = CellPoint(x: 3, y: 5)
+    tiles[span.offset(stairs)] = .stairs
+    return Maze(
+      span: span, tiles: tiles, ends: MazeEnds(start: CellPoint(x: 1, y: 5), stairs: stairs),
+      kind: .filledGrid)
   }
 
   private func hall() -> Maze {

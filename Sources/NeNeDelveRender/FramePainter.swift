@@ -35,7 +35,7 @@ public enum FramePainter {
       }
       var column = 0
       while column < canvas.width {
-        put(deck(" "), at: CellPoint(x: column, y: row))
+        put(hudCell(" ", row: row, column: column, line: text), at: CellPoint(x: column, y: row))
         column += 1
       }
       column = 0
@@ -43,13 +43,18 @@ public enum FramePainter {
         if column >= canvas.width {
           return
         }
-        put(deck(character), at: CellPoint(x: column, y: row))
+        put(
+          hudCell(character, row: row, column: column, line: text), at: CellPoint(x: column, y: row)
+        )
         column += 1
       }
     }
 
-    func deck(_ glyph: Character) -> Cell {
-      Cell(glyph: glyph, foreground: palette.accent.hud, background: palette.accent.chip)
+    func hudCell(_ glyph: Character, row: Int, column: Int, line: String) -> Cell {
+      let mark = HudTone.Mark(glyph: glyph, row: row, column: column, line: line)
+      return Cell(
+        glyph: glyph, foreground: HudTone.foreground(mark, palette: palette),
+        background: palette.ink.background)
     }
 
     mutating func writeMaze(_ world: FloorWorld) {
