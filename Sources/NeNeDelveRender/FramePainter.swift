@@ -64,6 +64,9 @@ public enum FramePainter {
       if point == world.walk.explorer.position {
         return runner()
       }
+      if let spark = spark(world, point) {
+        return spark
+      }
       switch world.walk.maze.tile(at: point) {
       case .wall:
         return wall(world, point: point)
@@ -74,6 +77,20 @@ public enum FramePainter {
           glyph: ScreenText.stairs, foreground: palette.ink.background,
           background: palette.accent.stairs)
       }
+    }
+
+    func spark(_ world: FloorWorld, _ point: CellPoint) -> Cell? {
+      guard let burst = world.fixtures.burstMark() else {
+        return nil
+      }
+      let column = point.x - burst.point.x
+      let row = point.y - burst.point.y
+      if abs(column) + abs(row) != 1 || !isOpen(world, point) {
+        return nil
+      }
+      return Cell(
+        glyph: ScreenText.spark(burst.age), foreground: palette.accent.loot,
+        background: palette.ink.background)
     }
 
     func wall(_ world: FloorWorld, point: CellPoint) -> Cell {
@@ -162,6 +179,11 @@ public enum FramePainter {
     }
 
     func floor(_ world: FloorWorld, point: CellPoint) -> Cell {
+      if world.fixtures.sealed(at: point) {
+        return Cell(
+          glyph: ScreenText.chest, foreground: palette.accent.loot,
+          background: palette.ink.background)
+      }
       let glyph = visited(world, point) ? ScreenText.trail : ScreenText.floor
       return Cell(glyph: glyph, foreground: palette.ink.floor, background: palette.ink.background)
     }

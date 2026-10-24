@@ -9,7 +9,7 @@ struct ExplorerTests {
     var tookStairs = false
     for raw in 0..<40 {
       var rng = SplitMix64(seed: Seed(raw: UInt64(raw)))
-      switch Explorer.begin(maze).step(maze, rng: &rng) {
+      switch Explorer.begin(maze).step(maze, rng: &rng, avoidStairs: false, lure: nil) {
       case .moved(let explorer):
         #expect(explorer.position == CellPoint(x: 3, y: 2))
         missed = true
@@ -27,7 +27,9 @@ struct ExplorerTests {
   @Test(arguments: [1, 8, 40, 2_048])
   func runnerArrivesWithinTheBound(raw: Int) {
     let span = GridSpan(width: 21, height: 15)
-    guard case .world(var world) = FloorReducer.begin(launchSeed: Seed(raw: UInt64(raw)), span: span) else {
+    guard
+      case .world(var world) = FloorReducer.begin(launchSeed: Seed(raw: UInt64(raw)), span: span)
+    else {
       Issue.record("expected a world")
       return
     }
@@ -45,7 +47,8 @@ struct ExplorerTests {
   }
 
   private func positions(seed: UInt64, span: GridSpan) -> [CellPoint] {
-    guard case .world(var world) = FloorReducer.begin(launchSeed: Seed(raw: seed), span: span) else {
+    guard case .world(var world) = FloorReducer.begin(launchSeed: Seed(raw: seed), span: span)
+    else {
       return []
     }
     return walk(&world)
@@ -79,6 +82,7 @@ struct ExplorerTests {
     tiles[span.offset(start)] = .floor
     tiles[span.offset(stairs)] = .stairs
     tiles[span.offset(side)] = .floor
-    return Maze(span: span, tiles: tiles, ends: MazeEnds(start: start, stairs: stairs), kind: .filledGrid)
+    return Maze(
+      span: span, tiles: tiles, ends: MazeEnds(start: start, stairs: stairs), kind: .filledGrid)
   }
 }

@@ -31,7 +31,8 @@ public struct ThemePalette: Equatable, Sendable {
     accent: ThemeAccent(
       stairs: Rgb(red: 255, green: 255, blue: 255),
       hud: Rgb(red: 0, green: 255, blue: 255),
-      chip: Rgb(red: 72, green: 0, blue: 84)
+      chip: Rgb(red: 72, green: 0, blue: 84),
+      loot: Rgb(red: 255, green: 186, blue: 48)
     )
   )
 }

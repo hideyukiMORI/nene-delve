@@ -71,6 +71,24 @@ struct FramePainterTests {
     #expect(skinMatches(grid, maze: maze))
   }
 
+  @Test func aSealedChestIsADollar() {
+    let maze = rectangle()
+    let chest = CellPoint(x: 4, y: 4)
+    let grid = FramePainter.paint(
+      world: furnished(maze, chest: chest, phase: .sealed),
+      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    #expect(glyph(grid, point: chest) == ScreenText.chest)
+  }
+
+  @Test func anOpeningChestThrowsSparks() {
+    let maze = rectangle()
+    let chest = CellPoint(x: 4, y: 4)
+    let grid = FramePainter.paint(
+      world: furnished(maze, chest: chest, phase: .bursting(1)),
+      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    #expect(glyph(grid, point: CellPoint(x: 4, y: 3)) == ScreenText.spark(1))
+  }
+
   @Test func screenTextKeepsTheTooSmallLine() {
     #expect(ScreenText.tooSmall == "端末が小さすぎる")
     #expect(ScreenText.rejection(.unknownOption) == "不明な起動オプションです")
@@ -98,7 +116,20 @@ struct FramePainterTests {
     FloorWorld(
       course: FloorCourse(launchSeed: Seed(raw: 1), floor: .first, pace: .explore),
       walk: FloorWalk(
-        maze: maze, explorer: Explorer.begin(maze), rng: SplitMix64(seed: Seed(raw: 1)), steps: 0)
+        maze: maze, explorer: Explorer.begin(maze), rng: SplitMix64(seed: Seed(raw: 1)), steps: 0),
+      fixtures: FloorFixtureField(fixtures: []),
+      aim: .explore
+    )
+  }
+
+  private func furnished(_ maze: Maze, chest: CellPoint, phase: FloorFixture.Phase) -> FloorWorld {
+    let fixture = FloorFixture(point: chest, kind: .chest, phase: phase)
+    return FloorWorld(
+      course: FloorCourse(launchSeed: Seed(raw: 1), floor: .first, pace: .explore),
+      walk: FloorWalk(
+        maze: maze, explorer: Explorer.begin(maze), rng: SplitMix64(seed: Seed(raw: 1)), steps: 0),
+      fixtures: FloorFixtureField(fixtures: [fixture]),
+      aim: .explore
     )
   }
 

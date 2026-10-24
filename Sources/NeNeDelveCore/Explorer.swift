@@ -9,33 +9,70 @@ public struct Explorer: Equatable, Sendable {
     return Explorer(position: maze.start, path: [maze.start], seen: seen)
   }
 
-  func step(_ maze: Maze, rng: inout SplitMix64) -> ExploreMove {
-    let choices = unvisitedNeighbors(maze)
-    if let next = pick(choices, rng: &rng) {
+  func step(
+    _ maze: Maze, rng: inout SplitMix64, avoidStairs: Bool, lure: CellPoint?
+  ) -> ExploreMove {
+    let choices = unvisitedNeighbors(maze, avoidStairs: avoidStairs)
+    if let next = pick(choices, rng: &rng, lure: lure) {
       return advance(maze, to: next)
     }
     return backtrack()
   }
 
-  private func unvisitedNeighbors(_ maze: Maze) -> [CellPoint] {
+  func move(to next: CellPoint, maze: Maze) -> ExploreMove {
+    advance(maze, to: next)
+  }
+
+  private func unvisitedNeighbors(_ maze: Maze, avoidStairs: Bool) -> [CellPoint] {
     var found: [CellPoint] = []
     for direction in Direction.cardinal {
       let next = CellPoint(x: position.x + direction.stepX, y: position.y + direction.stepY)
-      if maze.isOpenUnseen(next, seen: seen) {
+      if maze.isOpenUnseen(next, seen: seen) && !blocked(maze, next, avoidStairs: avoidStairs) {
         found.append(next)
       }
     }
     return found
   }
 
-  private func pick(_ choices: [CellPoint], rng: inout SplitMix64) -> CellPoint? {
-    if choices.isEmpty {
+  private func blocked(_ maze: Maze, _ next: CellPoint, avoidStairs: Bool) -> Bool {
+    if !avoidStairs {
+      return false
+    }
+    switch maze.tile(at: next) {
+    case .stairs:
+      return true
+    case .floor, .wall:
+      return false
+    }
+  }
+
+  private func pick(_ choices: [CellPoint], rng: inout SplitMix64, lure: CellPoint?) -> CellPoint? {
+    let pool = favored(choices, lure: lure)
+    if pool.isEmpty {
       return nil
     }
     let (value, generator) = rng.next()
     rng = generator
-    let index = Int(value % UInt64(choices.count))
-    return choices[index]
+    let index = Int(value % UInt64(pool.count))
+    return pool[index]
+  }
+
+  private func favored(_ choices: [CellPoint], lure: CellPoint?) -> [CellPoint] {
+    guard let lure else {
+      return choices
+    }
+    var best: [CellPoint] = []
+    var bestDistance = 0
+    for choice in choices {
+      let distance = abs(choice.x - lure.x) + abs(choice.y - lure.y)
+      if best.isEmpty || distance < bestDistance {
+        best = [choice]
+        bestDistance = distance
+      } else if distance == bestDistance {
+        best.append(choice)
+      }
+    }
+    return best
   }
 
   private func advance(_ maze: Maze, to next: CellPoint) -> ExploreMove {
