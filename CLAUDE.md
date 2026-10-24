@@ -100,4 +100,4 @@ Waivers: none | WVR-NNNN
 ## 6. いまの状況
 
 現在のタスクは [docs/todo/current.md](docs/todo/current.md)。GitHub Issue が正で、そこは要約。
-スクリーンセーバーはまだ起動しない。`main` は空である。
+タイプ B の縦切りは起動する。タイプ A と演出はまだ無い。

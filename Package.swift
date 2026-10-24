@@ -28,5 +28,17 @@ let package = Package(
       dependencies: ["NeNeDelveCore", "NeNeDelveRender", "NeNeDelveTerminal"],
       swiftSettings: strictSettings
     ),
+    .testTarget(
+      name: "NeNeDelveCoreTests",
+      dependencies: ["NeNeDelveCore"]
+    ),
+    .testTarget(
+      name: "NeNeDelveRenderTests",
+      dependencies: ["NeNeDelveRender"]
+    ),
+    .testTarget(
+      name: "NeNeDelveTerminalTests",
+      dependencies: ["NeNeDelveTerminal"]
+    ),
   ]
 )
