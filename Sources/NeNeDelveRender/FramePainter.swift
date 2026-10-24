@@ -1,20 +1,26 @@
 import NeNeDelveCore
 
 public enum FramePainter {
-  public static func paint(world: FloorWorld, clock: HudClock, theme: ThemeName, canvas: GridSpan)
+  public static func paint(world: FloorWorld, clock: HudClock, look: FrameLook, canvas: GridSpan)
     -> CellGrid
   {
     if canvas.width <= 0 || canvas.height <= 0 {
       return CellGrid(span: canvas, cells: [])
     }
-    let palette = ThemePalette.palette(theme)
+    let palette = ThemePalette.palette(look.theme)
     var job = Job(
       palette: palette, canvas: canvas, cells: Array(repeating: palette.blank, count: canvas.count))
     let hud = HudLayout.make(
-      clock: clock, floor: world.course.floor, theme: theme, width: canvas.width)
+      clock: clock, floor: world.course.floor, look: look, width: canvas.width)
     job.writeLine(hud.first, row: 0)
     job.writeLine(hud.second, row: 1)
-    job.writeMaze(world)
+    switch look.view {
+    case .plan:
+      job.writeMaze(world)
+    case .depth:
+      var scene = DepthScene(world: world, palette: palette, canvas: canvas, facing: look.facing)
+      scene.paint(into: &job.cells)
+    }
     return CellGrid(span: canvas, cells: job.cells)
   }
 
@@ -28,15 +34,22 @@ public enum FramePainter {
         return
       }
       var column = 0
+      while column < canvas.width {
+        put(deck(" "), at: CellPoint(x: column, y: row))
+        column += 1
+      }
+      column = 0
       for character in text {
         if column >= canvas.width {
           return
         }
-        let cell = Cell(
-          glyph: character, foreground: palette.accent.hud, background: palette.ink.background)
-        put(cell, at: CellPoint(x: column, y: row))
+        put(deck(character), at: CellPoint(x: column, y: row))
         column += 1
       }
+    }
+
+    func deck(_ glyph: Character) -> Cell {
+      Cell(glyph: glyph, foreground: palette.accent.hud, background: palette.accent.chip)
     }
 
     mutating func writeMaze(_ world: FloorWorld) {

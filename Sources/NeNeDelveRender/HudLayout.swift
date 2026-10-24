@@ -10,14 +10,15 @@ public struct HudLayout: Equatable, Sendable {
     self.second = second
   }
 
-  public static func make(clock: HudClock, floor: FloorIndex, theme: ThemeName, width: Int)
+  public static func make(clock: HudClock, floor: FloorIndex, look: FrameLook, width: Int)
     -> HudLayout
   {
-    let labeled = pack(fields(clock, floor: floor, theme: theme, labeled: true), width: width)
+    let marks = Marks(floor: floor, theme: look.theme, view: look.view)
+    let labeled = pack(fields(clock, marks: marks, labeled: true), width: width)
     if labeled.complete {
       return labeled.layout
     }
-    return pack(fields(clock, floor: floor, theme: theme, labeled: false), width: width).layout
+    return pack(fields(clock, marks: marks, labeled: false), width: width).layout
   }
 
   private struct Field {
@@ -25,25 +26,30 @@ public struct HudLayout: Equatable, Sendable {
     let essential: Bool
   }
 
-  private static func fields(
-    _ clock: HudClock, floor: FloorIndex, theme: ThemeName, labeled: Bool
-  ) -> [Field] {
+  private struct Marks {
+    let floor: FloorIndex
+    let theme: ThemeName
+    let view: ViewMode
+  }
+
+  private static func fields(_ clock: HudClock, marks: Marks, labeled: Bool) -> [Field] {
     let total = DigitText.elapsed(clock.elapsed.totalSeconds)
     let stage = DigitText.elapsed(clock.elapsed.stageSeconds)
     let when = DigitText.date(clock.date) + " " + DigitText.clock(clock.time)
     let seed = String(clock.seed.raw)
     if labeled {
       return [
-        Field(text: ScreenText.floorLabel(floor), essential: true),
-        Field(text: "total " + total, essential: true),
-        Field(text: "stage " + stage, essential: true),
+        Field(text: "//FLR:" + ScreenText.floorLabel(marks.floor), essential: true),
+        Field(text: "UP:" + total, essential: true),
+        Field(text: "STG:" + stage, essential: true),
         Field(text: when, essential: true),
-        Field(text: "seed " + seed, essential: true),
-        Field(text: ScreenText.themeLine(theme), essential: false),
+        Field(text: "SEED:" + seed, essential: true),
+        Field(text: "SYS:" + ScreenText.themeLine(marks.theme), essential: false),
+        Field(text: "MODE:" + ScreenText.viewLine(marks.view), essential: false),
       ]
     }
     return [
-      Field(text: ScreenText.floorLabel(floor), essential: true),
+      Field(text: ScreenText.floorLabel(marks.floor), essential: true),
       Field(text: total, essential: true),
       Field(text: stage, essential: true),
       Field(text: when, essential: true),

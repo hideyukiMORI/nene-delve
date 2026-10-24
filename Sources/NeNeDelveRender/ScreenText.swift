@@ -52,6 +52,15 @@ public enum ScreenText {
     "B\(floor.depth)F"
   }
 
+  public static func viewLine(_ view: ViewMode) -> String {
+    switch view {
+    case .plan:
+      "2D"
+    case .depth:
+      "3D"
+    }
+  }
+
   public static func themeLine(_ theme: ThemeName) -> String {
     switch theme {
     case .neonGrid:

@@ -9,6 +9,11 @@ public struct Rgb: Equatable, Sendable {
     self.blue = Rgb.clamp(blue)
   }
 
+  public func dimmed(_ percent: Int) -> Rgb {
+    let scale = min(max(percent, 0), 100)
+    return Rgb(red: red * scale / 100, green: green * scale / 100, blue: blue * scale / 100)
+  }
+
   private static func clamp(_ value: Int) -> Int {
     if value < 0 {
       return 0
