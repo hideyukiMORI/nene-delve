@@ -35,7 +35,8 @@ public struct ThemePalette: Equatable, Sendable {
       mark: AccentMark(
         loot: Rgb(red: 255, green: 186, blue: 48),
         water: Rgb(red: 0, green: 60, blue: 120),
-        foam: Rgb(red: 190, green: 235, blue: 255)
+        foam: Rgb(red: 190, green: 235, blue: 255),
+        threat: Rgb(red: 255, green: 64, blue: 96)
       )
     )
   )
