@@ -21,6 +21,12 @@ public enum ScreenText {
     return marks[index]
   }
 
+  public static func ripple(_ phase: Int) -> Character {
+    let marks = Array("~`'")
+    let index = phase % marks.count
+    return marks[index]
+  }
+
   public static func rejection(_ reason: LaunchRejection) -> String {
     switch reason {
     case .missingValue:

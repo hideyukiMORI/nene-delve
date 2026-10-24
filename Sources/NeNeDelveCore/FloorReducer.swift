@@ -25,6 +25,11 @@ public enum FloorReducer {
       )
       return .running(aged)
     }
+    if let paused = world.fixtures.pausing() {
+      let held = advanced(
+        world, explorer: world.walk.explorer, rng: world.walk.rng, fixtures: paused)
+      return .running(held)
+    }
     switch world.aim {
     case .explore:
       return explore(world)
@@ -53,8 +58,9 @@ public enum FloorReducer {
   private static func explore(_ world: FloorWorld) -> FloorTick {
     var rng = world.walk.rng
     let lure = world.fixtures.nearestSealed(to: world.walk.explorer.position)
+    let bias = StepBias(lure: lure, avoid: world.fixtures.lakePoints())
     switch world.walk.explorer.step(
-      world.walk.maze, rng: &rng, avoidStairs: world.fixtures.holdsSealed, lure: lure)
+      world.walk.maze, rng: &rng, avoidStairs: world.fixtures.holdsSealed, bias: bias)
     {
     case .moved(let explorer):
       return moved(world, explorer: explorer, rng: rng, aim: .explore)
@@ -88,10 +94,11 @@ public enum FloorReducer {
   private static func moved(
     _ world: FloorWorld, explorer: Explorer, rng: SplitMix64, aim: WalkAim
   ) -> FloorTick {
-    let fixtures =
+    let opened =
       world.fixtures.sealed(at: explorer.position)
       ? world.fixtures.beginBurst(at: explorer.position)
       : world.fixtures
+    let fixtures = opened.entered(explorer.position)
     let stepped = advanced(world, explorer: explorer, rng: rng, fixtures: fixtures)
     return .running(retarget(stepped, aim: aim))
   }

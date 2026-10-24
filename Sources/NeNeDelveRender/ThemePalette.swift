@@ -32,7 +32,11 @@ public struct ThemePalette: Equatable, Sendable {
       stairs: Rgb(red: 255, green: 255, blue: 255),
       hud: Rgb(red: 0, green: 255, blue: 255),
       chip: Rgb(red: 72, green: 0, blue: 84),
-      loot: Rgb(red: 255, green: 186, blue: 48)
+      mark: AccentMark(
+        loot: Rgb(red: 255, green: 186, blue: 48),
+        water: Rgb(red: 0, green: 60, blue: 120),
+        foam: Rgb(red: 190, green: 235, blue: 255)
+      )
     )
   )
 }

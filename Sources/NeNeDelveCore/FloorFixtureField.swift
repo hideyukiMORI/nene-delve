@@ -7,20 +7,27 @@ public struct FloorFixtureField: Equatable, Sendable {
   /// これより少ない床には置かない。生成器の乱数とは別の列を使う。
   public static let minimumSpots = 24
 
-  public let fixtures: [FloorFixture]
+  /// 石を含む水面の上限。広い階でも部屋を埋め尽くさない。
+  static let pondCap = 11
 
-  public init(fixtures: [FloorFixture]) {
+  public let fixtures: [FloorFixture]
+  public let wade: Int
+
+  public init(fixtures: [FloorFixture], wade: Int) {
     self.fixtures = fixtures
+    self.wade = wade
   }
 
   public static func placed(in maze: Maze, seed: Seed) -> FloorFixtureField {
     let spots = candidates(maze)
     if spots.count < minimumSpots {
-      return FloorFixtureField(fixtures: [])
+      return FloorFixtureField(fixtures: [], wade: 0)
     }
     let (roll, rng) = SplitMix64(seed: seed).next()
     let count = min(spots.count, 1 + Int(roll % 3))
-    return FloorFixtureField(fixtures: choose(spots, count: count, rng: rng))
+    let chests = choose(spots, count: count, rng: rng)
+    let water = pond(maze, spots: spots, taken: chests.used, rng: chests.rng)
+    return FloorFixtureField(fixtures: chests.fixtures + water, wade: 0)
   }
 
   public var holdsSealed: Bool {
@@ -45,6 +52,8 @@ public struct FloorFixtureField: Equatable, Sendable {
         case .bursting, .open:
           return false
         }
+      case .lake:
+        return false
       }
     }
     return false
@@ -76,12 +85,51 @@ public struct FloorFixtureField: Equatable, Sendable {
     return nil
   }
 
+  public func lake(at point: CellPoint) -> Bool {
+    for fixture in fixtures where fixture.point == point {
+      switch fixture.kind {
+      case .lake:
+        return true
+      case .chest:
+        return false
+      }
+    }
+    return false
+  }
+
+  public func lakePoints() -> [CellPoint] {
+    var points: [CellPoint] = []
+    for fixture in fixtures {
+      switch fixture.kind {
+      case .lake:
+        points.append(fixture.point)
+      case .chest:
+        break
+      }
+    }
+    return points
+  }
+
+  public func entered(_ point: CellPoint) -> FloorFixtureField {
+    if lake(at: point) {
+      return FloorFixtureField(fixtures: fixtures, wade: FloorFixture.wadeSpan)
+    }
+    return self
+  }
+
+  public func pausing() -> FloorFixtureField? {
+    if wade <= 0 {
+      return nil
+    }
+    return FloorFixtureField(fixtures: fixtures, wade: wade - 1)
+  }
+
   public func beginBurst(at point: CellPoint) -> FloorFixtureField {
-    FloorFixtureField(fixtures: fixtures.map { retimed($0, at: point) })
+    FloorFixtureField(fixtures: fixtures.map { retimed($0, at: point) }, wade: wade)
   }
 
   public func ageBurst() -> FloorFixtureField {
-    FloorFixtureField(fixtures: fixtures.map { aged($0) })
+    FloorFixtureField(fixtures: fixtures.map { aged($0) }, wade: wade)
   }
 
   private func sealedDistance(_ fixture: FloorFixture, origin: CellPoint) -> Int? {
@@ -93,6 +141,8 @@ public struct FloorFixtureField: Equatable, Sendable {
       case .bursting, .open:
         return nil
       }
+    case .lake:
+      return nil
     }
   }
 
@@ -138,10 +188,17 @@ public struct FloorFixtureField: Equatable, Sendable {
     return spots
   }
 
-  private static func choose(_ spots: [CellPoint], count: Int, rng: SplitMix64) -> [FloorFixture] {
+  private struct Pick {
+    let fixtures: [FloorFixture]
+    let used: [CellPoint]
+    let rng: SplitMix64
+  }
+
+  private static func choose(_ spots: [CellPoint], count: Int, rng: SplitMix64) -> Pick {
     var pool = spots
     var generator = rng
     var chosen: [FloorFixture] = []
+    var used: [CellPoint] = []
     var index = 0
     while index < count {
       let (value, next) = generator.next()
@@ -151,8 +208,105 @@ public struct FloorFixtureField: Equatable, Sendable {
       pool[pick] = pool[index]
       pool[index] = point
       chosen.append(FloorFixture(point: point, kind: .chest, phase: .sealed))
+      used.append(point)
       index += 1
     }
-    return chosen
+    return Pick(fixtures: chosen, used: used, rng: generator)
+  }
+
+  private static func pond(
+    _ maze: Maze, spots: [CellPoint], taken: [CellPoint], rng: SplitMix64
+  ) -> [FloorFixture] {
+    let (roll, next) = rng.next()
+    if !roll.isMultiple(of: 2) {
+      return []
+    }
+    let open = unused(spots, taken: taken)
+    if open.isEmpty {
+      return []
+    }
+    let (indexRoll, _) = next.next()
+    let origin = open[Int(indexRoll % UInt64(open.count))]
+    var water = flood(maze, from: origin, blocked: taken + [maze.start])
+    if water.count < 5 {
+      return []
+    }
+    let stone = dryStone(water)
+    water.removeAll { $0 == stone }
+    return water.map { FloorFixture(point: $0, kind: .lake, phase: .open) }
+  }
+
+  /// つながった水面のうち、隣の水面が一番多いマスを石にする。同点は掘り始め側。
+  private static func dryStone(_ cells: [CellPoint]) -> CellPoint {
+    var best = cells[0]
+    var bestTouch = -1
+    for cell in cells {
+      let touch = neighbors(cell, cells)
+      if touch > bestTouch {
+        best = cell
+        bestTouch = touch
+      }
+    }
+    return best
+  }
+
+  private static func neighbors(_ cell: CellPoint, _ cells: [CellPoint]) -> Int {
+    var count = 0
+    for direction in Direction.cardinal {
+      let next = CellPoint(x: cell.x + direction.stepX, y: cell.y + direction.stepY)
+      if cells.contains(next) {
+        count += 1
+      }
+    }
+    return count
+  }
+
+  private static func unused(_ spots: [CellPoint], taken: [CellPoint]) -> [CellPoint] {
+    var open: [CellPoint] = []
+    for spot in spots where !taken.contains(spot) {
+      open.append(spot)
+    }
+    return open
+  }
+
+  private static func flood(_ maze: Maze, from origin: CellPoint, blocked: [CellPoint])
+    -> [CellPoint]
+  {
+    var found = [origin]
+    var head = 0
+    while head < found.count && found.count < pondCap {
+      let current = found[head]
+      head += 1
+      spread(maze, from: current, blocked: blocked, found: &found)
+    }
+    return found
+  }
+
+  private static func spread(
+    _ maze: Maze, from current: CellPoint, blocked: [CellPoint], found: inout [CellPoint]
+  ) {
+    for direction in Direction.cardinal {
+      if found.count >= pondCap {
+        return
+      }
+      let next = CellPoint(x: current.x + direction.stepX, y: current.y + direction.stepY)
+      if accepts(maze, next, blocked: blocked, found: found) {
+        found.append(next)
+      }
+    }
+  }
+
+  private static func accepts(
+    _ maze: Maze, _ next: CellPoint, blocked: [CellPoint], found: [CellPoint]
+  ) -> Bool {
+    if !maze.span.contains(next) || found.contains(next) || blocked.contains(next) {
+      return false
+    }
+    switch maze.tile(at: next) {
+    case .floor:
+      return true
+    case .wall, .stairs:
+      return false
+    }
   }
 }

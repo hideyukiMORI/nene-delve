@@ -1,6 +1,7 @@
 public struct FloorFixture: Equatable, Sendable {
   public enum Kind: Equatable, Sendable {
     case chest
+    case lake
   }
 
   public enum Phase: Equatable, Sendable {
@@ -10,6 +11,9 @@ public struct FloorFixture: Equatable, Sendable {
   }
 
   public static let burstSpan = 6
+
+  /// 水面に乗ったあとの足踏み。狭い階の一歩が読める長さ。
+  public static let wadeSpan = 6
 
   public let point: CellPoint
   public let kind: Kind
