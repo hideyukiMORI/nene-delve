@@ -6,11 +6,16 @@ import NeNeDelveTerminal
 /// 合成ルート。時計、シード、端末を結ぶのはここだけ。
 @main
 struct NeneDelveMain {
-  private struct Loop {
-    var world: FloorWorld?
+  private struct Play {
     let seed: Seed
     let origin: Int64
     var stage: Int64
+    var theme: ThemeName
+  }
+
+  private struct Loop {
+    var world: FloorWorld?
+    var play: Play
   }
 
   static func main() {
@@ -52,9 +57,10 @@ struct NeneDelveMain {
 
   private static func loop(_ terminal: inout TerminalSession, seed: Seed) -> Int32 {
     let origin = monotonic()
-    var state = Loop(world: nil, seed: seed, origin: origin, stage: origin)
+    let play = Play(seed: seed, origin: origin, stage: origin, theme: .neonGrid)
+    var state = Loop(world: nil, play: play)
     while true {
-      if terminal.pollKey() == .quit {
+      if !steer(terminal.pollKey(), play: &state.play) {
         return 0
       }
       if let code = frame(&terminal, state: &state) {
@@ -62,6 +68,21 @@ struct NeneDelveMain {
       }
       let pace = state.world?.course.pace.milliseconds ?? StepPace.explore.milliseconds
       sleepMilliseconds(pace)
+    }
+  }
+
+  private static func steer(_ key: Keystroke, play: inout Play) -> Bool {
+    switch key {
+    case .quit:
+      return false
+    case .nextTheme:
+      play.theme = play.theme.next()
+      return true
+    case .previousTheme:
+      play.theme = play.theme.previous()
+      return true
+    case .none:
+      return true
     }
   }
 
@@ -88,7 +109,7 @@ struct NeneDelveMain {
     _ terminal: inout TerminalSession, columns: Int, span: GridSpan, state: inout Loop
   ) -> Int32? {
     let resized = terminal.consumeResize()
-    if !ensure(&state.world, seed: state.seed, span: span, resized: resized) {
+    if !ensure(&state.world, seed: state.play.seed, span: span, resized: resized) {
       terminal.showTooSmall()
       return nil
     }
@@ -126,7 +147,7 @@ struct NeneDelveMain {
     let grid = FramePainter.paint(
       world: world,
       clock: hud(state: state),
-      theme: .neonGrid,
+      theme: state.play.theme,
       canvas: canvas
     )
     terminal.present(grid)
@@ -154,7 +175,7 @@ struct NeneDelveMain {
     switch FloorReducer.nextFloor(onStairs) {
     case .ready(let next):
       world = next
-      state.stage = monotonic()
+      state.play.stage = monotonic()
       return nil
     case .stuck:
       report(ScreenText.stuck)
@@ -166,10 +187,10 @@ struct NeneDelveMain {
     let now = monotonic()
     let (date, face) = wall()
     let elapsed = ElapsedPair(
-      totalSeconds: seconds(from: state.origin, to: now),
-      stageSeconds: seconds(from: state.stage, to: now)
+      totalSeconds: seconds(from: state.play.origin, to: now),
+      stageSeconds: seconds(from: state.play.stage, to: now)
     )
-    return HudClock(elapsed: elapsed, date: date, time: face, seed: state.seed)
+    return HudClock(elapsed: elapsed, date: date, time: face, seed: state.play.seed)
   }
 
   private static func seconds(from start: Int64, to end: Int64) -> Int {

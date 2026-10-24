@@ -14,6 +14,13 @@ struct HudLayoutTests {
     #expect(shown.contains("NEON GRID"))
   }
 
+  @Test func phosphorPutsItsNameOnTheWideLine() {
+    let layout = HudLayout.make(clock: clock(1), floor: .first, theme: .phosphor, width: 80)
+    let shown = layout.first + " " + layout.second
+    #expect(shown.contains("PHOSPHOR"))
+    #expect(!shown.contains("NEON GRID"))
+  }
+
   @Test func narrowLineDropsLabelsBeforeItDropsDigits() {
     let layout = HudLayout.make(clock: clock(UInt64.max), floor: .first, theme: .neonGrid, width: 40)
     let shown = layout.first + "\n" + layout.second

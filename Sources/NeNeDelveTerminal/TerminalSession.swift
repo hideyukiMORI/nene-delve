@@ -101,10 +101,7 @@ public struct TerminalSession {
     if read(STDIN_FILENO, &byte, 1) <= 0 {
       return .quit
     }
-    if byte == 0x03 || byte == UInt8(ascii: "q") {
-      return .quit
-    }
-    return .none
+    return Keystroke.decoded(byte)
   }
 }
 
