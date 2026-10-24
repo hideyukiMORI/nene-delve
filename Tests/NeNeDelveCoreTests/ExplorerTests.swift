@@ -9,7 +9,7 @@ struct ExplorerTests {
     var tookStairs = false
     for raw in 0..<40 {
       var rng = SplitMix64(seed: Seed(raw: UInt64(raw)))
-      switch Explorer.begin(maze).step(maze, rng: &rng, avoidStairs: false, lure: nil) {
+      switch Explorer.begin(maze).step(maze, rng: &rng, avoidStairs: false, bias: .none) {
       case .moved(let explorer):
         #expect(explorer.position == CellPoint(x: 3, y: 2))
         missed = true

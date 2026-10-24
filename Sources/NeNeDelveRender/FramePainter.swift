@@ -62,7 +62,7 @@ public enum FramePainter {
 
     func glyph(_ world: FloorWorld, point: CellPoint) -> Cell {
       if point == world.walk.explorer.position {
-        return runner()
+        return runner(world, point: point)
       }
       if let spark = spark(world, point) {
         return spark
@@ -89,7 +89,7 @@ public enum FramePainter {
         return nil
       }
       return Cell(
-        glyph: ScreenText.spark(burst.age), foreground: palette.accent.loot,
+        glyph: ScreenText.spark(burst.age), foreground: palette.accent.mark.loot,
         background: palette.ink.background)
     }
 
@@ -181,8 +181,14 @@ public enum FramePainter {
     func floor(_ world: FloorWorld, point: CellPoint) -> Cell {
       if world.fixtures.sealed(at: point) {
         return Cell(
-          glyph: ScreenText.chest, foreground: palette.accent.loot,
+          glyph: ScreenText.chest, foreground: palette.accent.mark.loot,
           background: palette.ink.background)
+      }
+      if world.fixtures.lake(at: point) {
+        let phase = world.walk.steps + point.x + point.y
+        return Cell(
+          glyph: ScreenText.ripple(phase), foreground: palette.accent.mark.foam,
+          background: palette.accent.mark.water)
       }
       let glyph = visited(world, point) ? ScreenText.trail : ScreenText.floor
       return Cell(glyph: glyph, foreground: palette.ink.floor, background: palette.ink.background)
@@ -192,9 +198,11 @@ public enum FramePainter {
       world.walk.explorer.seen[world.walk.maze.span.offset(point)]
     }
 
-    func runner() -> Cell {
-      Cell(
-        glyph: ScreenText.runner, foreground: palette.ink.runner, background: palette.accent.chip)
+    func runner(_ world: FloorWorld, point: CellPoint) -> Cell {
+      let ground =
+        world.fixtures.lake(at: point) ? palette.accent.mark.water : palette.accent.chip
+      return Cell(
+        glyph: ScreenText.runner, foreground: palette.ink.runner, background: ground)
     }
 
     mutating func put(_ cell: Cell, at point: CellPoint) {

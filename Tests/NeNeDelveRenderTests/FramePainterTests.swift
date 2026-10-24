@@ -89,6 +89,32 @@ struct FramePainterTests {
     #expect(glyph(grid, point: CellPoint(x: 4, y: 3)) == ScreenText.spark(1))
   }
 
+  @Test func aLakeRipplesInsteadOfATrail() {
+    let maze = rectangle()
+    let water = CellPoint(x: 4, y: 4)
+    let grid = FramePainter.paint(
+      world: furnished(maze, chest: water, phase: .open, kind: .lake),
+      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    #expect(glyph(grid, point: water) == ScreenText.ripple(water.x + water.y))
+    #expect(cell(grid, point: water).background == ThemePalette.palette(.neonGrid).accent.mark.water)
+  }
+
+  @Test func theRunnerStandsInTheWater() {
+    let maze = rectangle()
+    let water = CellPoint(x: 4, y: 4)
+    let base = furnished(maze, chest: water, phase: .open, kind: .lake)
+    let standing = Explorer(
+      position: water, path: [maze.ends.start, water], seen: base.walk.explorer.seen)
+    let walk = FloorWalk(maze: maze, explorer: standing, rng: base.walk.rng, steps: 0)
+    let world = FloorWorld(
+      course: base.course, walk: walk, fixtures: base.fixtures, aim: .explore)
+    let grid = FramePainter.paint(
+      world: world, clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+    let painted = cell(grid, point: water)
+    #expect(painted.glyph == ScreenText.runner)
+    #expect(painted.background == ThemePalette.palette(.neonGrid).accent.mark.water)
+  }
+
   @Test func screenTextKeepsTheTooSmallLine() {
     #expect(ScreenText.tooSmall == "端末が小さすぎる")
     #expect(ScreenText.rejection(.unknownOption) == "不明な起動オプションです")
@@ -117,18 +143,20 @@ struct FramePainterTests {
       course: FloorCourse(launchSeed: Seed(raw: 1), floor: .first, pace: .explore),
       walk: FloorWalk(
         maze: maze, explorer: Explorer.begin(maze), rng: SplitMix64(seed: Seed(raw: 1)), steps: 0),
-      fixtures: FloorFixtureField(fixtures: []),
+      fixtures: FloorFixtureField(fixtures: [], wade: 0),
       aim: .explore
     )
   }
 
-  private func furnished(_ maze: Maze, chest: CellPoint, phase: FloorFixture.Phase) -> FloorWorld {
-    let fixture = FloorFixture(point: chest, kind: .chest, phase: phase)
+  private func furnished(
+    _ maze: Maze, chest: CellPoint, phase: FloorFixture.Phase, kind: FloorFixture.Kind = .chest
+  ) -> FloorWorld {
+    let fixture = FloorFixture(point: chest, kind: kind, phase: phase)
     return FloorWorld(
       course: FloorCourse(launchSeed: Seed(raw: 1), floor: .first, pace: .explore),
       walk: FloorWalk(
         maze: maze, explorer: Explorer.begin(maze), rng: SplitMix64(seed: Seed(raw: 1)), steps: 0),
-      fixtures: FloorFixtureField(fixtures: [fixture]),
+      fixtures: FloorFixtureField(fixtures: [fixture], wade: 0),
       aim: .explore
     )
   }
@@ -242,6 +270,10 @@ struct FramePainterTests {
   }
 
   private func glyph(_ grid: CellGrid, point: CellPoint) -> Character {
-    grid.cell(column: point.x, row: point.y + ScreenText.hudRows).glyph
+    cell(grid, point: point).glyph
+  }
+
+  private func cell(_ grid: CellGrid, point: CellPoint) -> Cell {
+    grid.cell(column: point.x, row: point.y + ScreenText.hudRows)
   }
 }

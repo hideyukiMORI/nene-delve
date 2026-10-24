@@ -10,10 +10,10 @@ public struct Explorer: Equatable, Sendable {
   }
 
   func step(
-    _ maze: Maze, rng: inout SplitMix64, avoidStairs: Bool, lure: CellPoint?
+    _ maze: Maze, rng: inout SplitMix64, avoidStairs: Bool, bias: StepBias
   ) -> ExploreMove {
     let choices = unvisitedNeighbors(maze, avoidStairs: avoidStairs)
-    if let next = pick(choices, rng: &rng, lure: lure) {
+    if let next = pick(choices, rng: &rng, bias: bias) {
       return advance(maze, to: next)
     }
     return backtrack()
@@ -46,8 +46,8 @@ public struct Explorer: Equatable, Sendable {
     }
   }
 
-  private func pick(_ choices: [CellPoint], rng: inout SplitMix64, lure: CellPoint?) -> CellPoint? {
-    let pool = favored(choices, lure: lure)
+  private func pick(_ choices: [CellPoint], rng: inout SplitMix64, bias: StepBias) -> CellPoint? {
+    let pool = favored(choices, bias: bias)
     if pool.isEmpty {
       return nil
     }
@@ -57,10 +57,26 @@ public struct Explorer: Equatable, Sendable {
     return pool[index]
   }
 
-  private func favored(_ choices: [CellPoint], lure: CellPoint?) -> [CellPoint] {
-    guard let lure else {
+  private func favored(_ choices: [CellPoint], bias: StepBias) -> [CellPoint] {
+    let dry = drier(choices, avoid: bias.avoid)
+    guard let lure = bias.lure else {
+      return dry
+    }
+    return closest(dry, to: lure)
+  }
+
+  private func drier(_ choices: [CellPoint], avoid: [CellPoint]) -> [CellPoint] {
+    var dry: [CellPoint] = []
+    for choice in choices where !avoid.contains(choice) {
+      dry.append(choice)
+    }
+    if dry.isEmpty {
       return choices
     }
+    return dry
+  }
+
+  private func closest(_ choices: [CellPoint], to lure: CellPoint) -> [CellPoint] {
     var best: [CellPoint] = []
     var bestDistance = 0
     for choice in choices {
