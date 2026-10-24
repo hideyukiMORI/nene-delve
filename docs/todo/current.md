@@ -10,11 +10,11 @@
 | Phase 0 言語の実測 | 2026-10-23 に実施。抜粋は `docs/quality/phase0-results.json` |
 | Phase 1 文書とゲートの足場 | `make check` が終了コード 0（2026-10-23、この作業木） |
 | Phase 2 negative proof | `docs/quality/gate-proofs.md` に記録した規則だけを active にした |
-| Phase 3 縦切り 1 本 | タイプ A とタイプ B が階のシードで選ばれる。壁は一筆、踏破は `.`。宝箱は `$`。湖とモンスターはテーマの色。テーマは 10 種で `t` / `T` |
+| Phase 3 縦切り 1 本 | タイプ A とタイプ B が階のシードで選ばれる。壁は一筆、踏破は `.`。宝箱は `$`。湖とモンスターはテーマの色。テーマは 10 種で `t` / `T`。表示は `v` / `V` で平面と疑似 3D |
 
 ## 動くもの
 
-- 2026-10-24 14:39 に `make check` は終了コード 0。内訳は unittest 24 件、`conformance: ok`、swift-format、SwiftLint 0 件（58 files）、Swift Testing（Core 30、Render 16、Terminal 4）、`swift build -Xswiftc -warnings-as-errors` 成功
+- 2026-10-24 20:02 に `make check` は終了コード 0。内訳は unittest 24 件、`conformance: ok`、swift-format、SwiftLint 0 件（65 files）、Swift Testing（Core 30、Render 23、Terminal 4）、`swift build -Xswiftc -warnings-as-errors` 成功
 - 同じ実行で `swift test -Xswiftc -warnings-as-errors` は終了コード 0
 - 端末でないとき、実行ファイルは `端末ではありません` を 1 行出して終了コード 1。不明な起動オプションは `不明な起動オプションです` で終了コード 1
 - 80 列 24 行の疑似端末で `--seed 1` を 6 秒見ると、HUD 1 行に階層・通算・この階・日時・シード・`NEON GRID` が出て、壁は `+` `-` `|`、踏んだ床は `.`、走者は `@`。`q` で終了コード 0
@@ -25,6 +25,7 @@
 - 14:20 の 110 列 36 行 `--seed 7` で、水面は 10 マスの濃い青で、内側に乾いた隙間がある。走者 `@` がその青地に乗った。同じ画面に `$` と白地の階段がある。`q` で終了コード 0、標準エラーは空
 - 14:32 の 100 列 32 行 `--seed 2` で、通路に赤い `!` が点滅した。`--seed 9` では走者の隣に赤い `&` があり、下に `#` が走った。同じ画面に湖と `$` がある。`q` で終了コード 0、標準エラーは空
 - 14:38 の 100 列 32 行 `--seed 9` で、`t` のあと HUD は `PHOSPHOR` で壁が緑、次の `t` で `AMBER TERM`、`T` で `PHOSPHOR` に戻った。`q` で終了コード 0、標準エラーは空
+- 19:59 の 100 列 32 行 `--seed 9` で、HUD は `//FLR:B1F` `UP:` `STG:` 日時 `SEED:9` `SYS:NEON GRID` `MODE:2D`、地は chip。`v` のあと `MODE:3D`。通路は `#` `%` `+` `:` で近くが太く、中央に `+`。20:02 の同じ大きさで `v` のあと `q` は終了コード 0、標準エラーは空。行き止まりでは `#` が画面を埋める
 - PR #2 は `MERGED`（`mergedAt` `2026-10-23T16:10:28Z`、merge commit `c4834cf084b241a6eccbc7de6cb2e75e7bf2d700`）。Issue #1 は `CLOSED`（`closedAt` `2026-10-23T16:10:30Z`）
 
 ## 動かないもの

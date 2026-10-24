@@ -16,6 +16,8 @@ struct NeneDelveMain {
   private struct Loop {
     var world: FloorWorld?
     var play: Play
+    var view: ViewMode
+    var facing: Direction
   }
 
   static func main() {
@@ -58,9 +60,9 @@ struct NeneDelveMain {
   private static func loop(_ terminal: inout TerminalSession, seed: Seed) -> Int32 {
     let origin = monotonic()
     let play = Play(seed: seed, origin: origin, stage: origin, theme: .neonGrid)
-    var state = Loop(world: nil, play: play)
+    var state = Loop(world: nil, play: play, view: .plan, facing: .north)
     while true {
-      if !steer(terminal.pollKey(), play: &state.play) {
+      if !steer(terminal.pollKey(), state: &state) {
         return 0
       }
       if let code = frame(&terminal, state: &state) {
@@ -71,15 +73,18 @@ struct NeneDelveMain {
     }
   }
 
-  private static func steer(_ key: Keystroke, play: inout Play) -> Bool {
+  private static func steer(_ key: Keystroke, state: inout Loop) -> Bool {
     switch key {
     case .quit:
       return false
     case .nextTheme:
-      play.theme = play.theme.next()
+      state.play.theme = state.play.theme.next()
       return true
     case .previousTheme:
-      play.theme = play.theme.previous()
+      state.play.theme = state.play.theme.previous()
+      return true
+    case .toggleView:
+      state.view = state.view.toggled()
       return true
     case .none:
       return true
@@ -109,17 +114,39 @@ struct NeneDelveMain {
     _ terminal: inout TerminalSession, columns: Int, span: GridSpan, state: inout Loop
   ) -> Int32? {
     let resized = terminal.consumeResize()
+    let before = state.world
     if !ensure(&state.world, seed: state.play.seed, span: span, resized: resized) {
       terminal.showTooSmall()
       return nil
     }
+    retarget(&state, before: before)
     guard var current = state.world else {
       return 1
     }
     present(&terminal, world: current, columns: columns, state: state)
+    let seen = current
     let code = step(&terminal, columns: columns, world: &current, state: &state)
     state.world = current
+    retarget(&state, before: seen)
     return code
+  }
+
+  private static func retarget(_ state: inout Loop, before: FloorWorld?) {
+    guard let world = state.world else {
+      return
+    }
+    if let before, sameRoom(before, world) {
+      state.facing = Sightline.advanced(
+        from: before.walk.explorer.position, to: world.walk.explorer.position, facing: state.facing)
+      return
+    }
+    state.facing = Sightline.opening(
+      in: world.walk.maze, from: world.walk.explorer.position, toward: world.walk.maze.stairs)
+  }
+
+  private static func sameRoom(_ before: FloorWorld, _ world: FloorWorld) -> Bool {
+    before.course.floor.depth == world.course.floor.depth
+      && before.walk.maze.span == world.walk.maze.span
   }
 
   private static func ensure(_ world: inout FloorWorld?, seed: Seed, span: GridSpan, resized: Bool)
@@ -147,7 +174,7 @@ struct NeneDelveMain {
     let grid = FramePainter.paint(
       world: world,
       clock: hud(state: state),
-      theme: state.play.theme,
+      look: FrameLook(theme: state.play.theme, view: state.view, facing: state.facing),
       canvas: canvas
     )
     terminal.present(grid)

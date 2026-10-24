@@ -7,16 +7,18 @@ struct FramePainterTests {
   @Test func hudShowsFloorClockSeedAndTheme() {
     let world = opened()
     let grid = FramePainter.paint(
-      world: world, clock: sampleClock(), theme: .neonGrid, canvas: canvas(for: world))
+      world: world, clock: sampleClock(), look: flat(), canvas: canvas(for: world))
     let top = line(grid, row: 0)
     let theme = line(grid, row: 1)
     let shown = top + theme
-    #expect(shown.contains("B1F"))
-    #expect(shown.contains("total 01:01:01"))
-    #expect(shown.contains("stage 00:00:05"))
+    #expect(shown.contains("//FLR:B1F"))
+    #expect(shown.contains("UP:01:01:01"))
+    #expect(shown.contains("STG:00:00:05"))
     #expect(shown.contains("2026-10-24 12:40:00"))
-    #expect(shown.contains("seed 9"))
-    #expect(shown.contains("NEON GRID"))
+    #expect(shown.contains("SEED:9"))
+    #expect(shown.contains("SYS:NEON GRID"))
+    #expect(shown.contains("MODE:2D"))
+    #expect(grid.cell(column: 0, row: 0).background == ThemePalette.palette(.neonGrid).accent.chip)
     #expect(glyph(grid, point: world.walk.explorer.position) == ScreenText.runner)
     #expect(glyph(grid, point: world.walk.maze.stairs) == ScreenText.stairs)
     #expect(grid.cell(column: 0, row: ScreenText.hudRows).glyph == ScreenText.joint)
@@ -31,7 +33,7 @@ struct FramePainterTests {
     }
     world = next
     let grid = FramePainter.paint(
-      world: world, clock: sampleClock(), theme: .neonGrid, canvas: canvas(for: world))
+      world: world, clock: sampleClock(), look: flat(), canvas: canvas(for: world))
     #expect(glyph(grid, point: start) == ScreenText.trail)
     #expect(glyph(grid, point: world.walk.explorer.position) == ScreenText.runner)
   }
@@ -43,14 +45,14 @@ struct FramePainterTests {
       return
     }
     let grid = FramePainter.paint(
-      world: world(maze), clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      world: world(maze), clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     #expect(blankRock(grid, maze: maze))
   }
 
   @Test func aRectangularRoomIsOneFrame() {
     let maze = rectangle()
     let grid = FramePainter.paint(
-      world: world(maze), clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      world: world(maze), clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     #expect(glyph(grid, point: CellPoint(x: 2, y: 2)) == ScreenText.joint)
     #expect(glyph(grid, point: CellPoint(x: 4, y: 2)) == ScreenText.dash)
     #expect(glyph(grid, point: CellPoint(x: 2, y: 4)) == ScreenText.bar)
@@ -67,7 +69,7 @@ struct FramePainterTests {
       return
     }
     let grid = FramePainter.paint(
-      world: world(maze), clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      world: world(maze), clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     #expect(skinMatches(grid, maze: maze))
   }
 
@@ -76,7 +78,7 @@ struct FramePainterTests {
     let chest = CellPoint(x: 4, y: 4)
     let grid = FramePainter.paint(
       world: furnished(maze, chest: chest, phase: .sealed),
-      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     #expect(glyph(grid, point: chest) == ScreenText.chest)
   }
 
@@ -85,7 +87,7 @@ struct FramePainterTests {
     let chest = CellPoint(x: 4, y: 4)
     let grid = FramePainter.paint(
       world: furnished(maze, chest: chest, phase: .bursting(1)),
-      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     #expect(glyph(grid, point: CellPoint(x: 4, y: 3)) == ScreenText.spark(1))
   }
 
@@ -94,9 +96,10 @@ struct FramePainterTests {
     let water = CellPoint(x: 4, y: 4)
     let grid = FramePainter.paint(
       world: furnished(maze, chest: water, phase: .open, kind: .lake),
-      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     #expect(glyph(grid, point: water) == ScreenText.ripple(water.x + water.y))
-    #expect(cell(grid, point: water).background == ThemePalette.palette(.neonGrid).accent.mark.water)
+    #expect(
+      cell(grid, point: water).background == ThemePalette.palette(.neonGrid).accent.mark.water)
   }
 
   @Test func theRunnerStandsInTheWater() {
@@ -109,7 +112,7 @@ struct FramePainterTests {
     let world = FloorWorld(
       course: base.course, walk: walk, fixtures: base.fixtures, aim: .explore)
     let grid = FramePainter.paint(
-      world: world, clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      world: world, clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     let painted = cell(grid, point: water)
     #expect(painted.glyph == ScreenText.runner)
     #expect(painted.background == ThemePalette.palette(.neonGrid).accent.mark.water)
@@ -121,18 +124,18 @@ struct FramePainterTests {
     let blinking = FloorProwler(point: spot, chases: false, mood: .blink)
     let quiet = FramePainter.paint(
       world: haunted(maze, beast: blinking, steps: 0),
-      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     let body = cell(quiet, point: spot)
     #expect(body.glyph == ScreenText.prowler)
     #expect(body.foreground == ThemePalette.palette(.neonGrid).accent.mark.threat)
     let alarm = FramePainter.paint(
       world: haunted(maze, beast: blinking, steps: 1),
-      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     #expect(glyph(alarm, point: spot) == ScreenText.alarm)
     let fighting = FloorProwler(point: spot, chases: true, mood: .fight(1))
     let battle = FramePainter.paint(
       world: haunted(maze, beast: fighting, steps: 1),
-      clock: sampleClock(), theme: .neonGrid, canvas: canvas(forMaze: maze))
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
     #expect(glyph(battle, point: CellPoint(x: 4, y: 3)) == ScreenText.clash(1))
   }
 
@@ -157,6 +160,79 @@ struct FramePainterTests {
 
   private func canvas(forMaze maze: Maze) -> GridSpan {
     GridSpan(width: 80, height: maze.span.height + ScreenText.hudRows)
+  }
+
+  @Test func depthShowsTheStairsAheadInsteadOfTheMap() {
+    let maze = hall()
+    let grid = FramePainter.paint(
+      world: world(maze), clock: sampleClock(),
+      look: FrameLook(theme: .neonGrid, view: .depth, facing: .east), canvas: canvas(forMaze: maze))
+    let shown = column(grid, at: grid.span.width / 2)
+    let frame = picture(grid)
+    #expect(shown.contains(">"))
+    #expect(frame.contains("#") || frame.contains("%"))
+    #expect(!frame.contains("@"))
+  }
+
+  @Test func depthShowsAChestAndAProwlerAhead() {
+    let maze = hall()
+    let chest = CellPoint(x: 4, y: 5)
+    let beast = FloorProwler(point: CellPoint(x: 6, y: 5), chases: false, mood: .blink)
+    let grid = FramePainter.paint(
+      world: stocked(maze, chest: chest, beast: beast),
+      clock: sampleClock(),
+      look: FrameLook(theme: .neonGrid, view: .depth, facing: .east), canvas: canvas(forMaze: maze)
+    )
+    let shown = picture(grid)
+    #expect(shown.contains("$"))
+    #expect(shown.contains("&"))
+  }
+
+  private func hall() -> Maze {
+    let span = GridSpan(width: 15, height: 11)
+    var tiles = Array(repeating: Tile.wall, count: span.count)
+    var column = 1
+    while column <= 8 {
+      tiles[span.offset(CellPoint(x: column, y: 5))] = .floor
+      column += 1
+    }
+    let stairs = CellPoint(x: 9, y: 5)
+    tiles[span.offset(stairs)] = .stairs
+    return Maze(
+      span: span, tiles: tiles, ends: MazeEnds(start: CellPoint(x: 1, y: 5), stairs: stairs),
+      kind: .filledGrid)
+  }
+
+  private func stocked(_ maze: Maze, chest: CellPoint, beast: FloorProwler) -> FloorWorld {
+    let base = furnished(maze, chest: chest, phase: .sealed)
+    return FloorWorld(
+      course: base.course, walk: base.walk,
+      fixtures: FloorFixtureField(fixtures: base.fixtures.fixtures, wade: 0, prowlers: [beast]),
+      aim: base.aim)
+  }
+
+  private func column(_ grid: CellGrid, at column: Int) -> String {
+    var text = ""
+    var row = ScreenText.hudRows
+    while row < grid.span.height {
+      text.append(grid.cell(column: column, row: row).glyph)
+      row += 1
+    }
+    return text
+  }
+
+  private func picture(_ grid: CellGrid) -> String {
+    var text = ""
+    var row = ScreenText.hudRows
+    while row < grid.span.height {
+      text += line(grid, row: row)
+      row += 1
+    }
+    return text
+  }
+
+  private func flat() -> FrameLook {
+    FrameLook(theme: .neonGrid, view: .plan, facing: .north)
   }
 
   private func world(_ maze: Maze) -> FloorWorld {
