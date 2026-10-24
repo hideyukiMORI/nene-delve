@@ -56,6 +56,24 @@ public enum ScreenText {
     switch theme {
     case .neonGrid:
       "NEON GRID"
+    case .phosphor:
+      "PHOSPHOR"
+    case .amberTerm:
+      "AMBER TERM"
+    case .iceCore:
+      "ICE CORE"
+    case .synthwave:
+      "SYNTHWAVE"
+    case .deepSea:
+      "DEEP SEA"
+    case .void:
+      "VOID"
+    case .toxic:
+      "TOXIC"
+    case .aurora:
+      "AURORA"
+    case .carbon:
+      "CARBON"
     }
   }
 }
