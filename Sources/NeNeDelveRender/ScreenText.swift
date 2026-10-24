@@ -13,6 +13,13 @@ public enum ScreenText {
   public static let trail: Character = "."
   public static let runner: Character = "@"
   public static let stairs: Character = ">"
+  public static let chest: Character = "$"
+
+  public static func spark(_ age: Int) -> Character {
+    let marks = Array("*%~^")
+    let index = age % marks.count
+    return marks[index]
+  }
 
   public static func rejection(_ reason: LaunchRejection) -> String {
     switch reason {

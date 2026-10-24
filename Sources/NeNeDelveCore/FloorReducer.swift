@@ -18,7 +18,19 @@ public enum FloorReducer {
     if world.walk.steps > limit(world.walk.maze) {
       return .stuck
     }
-    return stepped(world)
+    if world.fixtures.burstMark() != nil {
+      let aged = advanced(
+        world, explorer: world.walk.explorer, rng: world.walk.rng,
+        fixtures: world.fixtures.ageBurst()
+      )
+      return .running(aged)
+    }
+    switch world.aim {
+    case .explore:
+      return explore(world)
+    case .recover:
+      return recover(world)
+    }
   }
 
   public static func nextFloor(_ world: FloorWorld) -> NextFloor {
@@ -38,41 +50,81 @@ public enum FloorReducer {
     }
   }
 
-  private static func stepped(_ world: FloorWorld) -> FloorTick {
+  private static func explore(_ world: FloorWorld) -> FloorTick {
     var rng = world.walk.rng
-    switch world.walk.explorer.step(world.walk.maze, rng: &rng) {
+    let lure = world.fixtures.nearestSealed(to: world.walk.explorer.position)
+    switch world.walk.explorer.step(
+      world.walk.maze, rng: &rng, avoidStairs: world.fixtures.holdsSealed, lure: lure)
+    {
     case .moved(let explorer):
-      return .running(replacing(world, explorer: explorer, rng: rng))
+      return moved(world, explorer: explorer, rng: rng, aim: .explore)
     case .arrived(let explorer):
-      return .descended(replacing(world, explorer: explorer, rng: rng))
+      return .descended(advanced(world, explorer: explorer, rng: rng, fixtures: world.fixtures))
+    case .stuck:
+      return recover(world)
+    }
+  }
+
+  private static func recover(_ world: FloorWorld) -> FloorTick {
+    if world.fixtures.sealed(at: world.walk.explorer.position) {
+      return moved(world, explorer: world.walk.explorer, rng: world.walk.rng, aim: .recover)
+    }
+    let origin = world.walk.explorer.position
+    let target = world.fixtures.nearestSealed(to: origin) ?? world.walk.maze.stairs
+    guard let next = FloorRoute.firstStep(world.walk.maze, from: origin, to: target) else {
+      return .stuck
+    }
+    switch world.walk.explorer.move(to: next, maze: world.walk.maze) {
+    case .moved(let explorer):
+      return moved(world, explorer: explorer, rng: world.walk.rng, aim: .recover)
+    case .arrived(let explorer):
+      return .descended(
+        advanced(world, explorer: explorer, rng: world.walk.rng, fixtures: world.fixtures))
     case .stuck:
       return .stuck
     }
   }
 
+  private static func moved(
+    _ world: FloorWorld, explorer: Explorer, rng: SplitMix64, aim: WalkAim
+  ) -> FloorTick {
+    let fixtures =
+      world.fixtures.sealed(at: explorer.position)
+      ? world.fixtures.beginBurst(at: explorer.position)
+      : world.fixtures
+    let stepped = advanced(world, explorer: explorer, rng: rng, fixtures: fixtures)
+    return .running(retarget(stepped, aim: aim))
+  }
+
   private static func makeWorld(launchSeed: Seed, floor: FloorIndex, maze: Maze, pace: StepPace)
     -> FloorWorld
   {
+    let floorSeed = launchSeed.forFloor(floor)
     let course = FloorCourse(launchSeed: launchSeed, floor: floor, pace: pace)
     let walk = FloorWalk(
       maze: maze,
       explorer: Explorer.begin(maze),
-      rng: SplitMix64(seed: launchSeed.forFloor(floor)),
+      rng: SplitMix64(seed: floorSeed),
       steps: 0
     )
-    return FloorWorld(course: course, walk: walk)
+    let fixtures = FloorFixtureField.placed(in: maze, seed: floorSeed)
+    return FloorWorld(course: course, walk: walk, fixtures: fixtures, aim: .explore)
   }
 
-  private static func replacing(_ world: FloorWorld, explorer: Explorer, rng: SplitMix64)
-    -> FloorWorld
-  {
+  private static func advanced(
+    _ world: FloorWorld, explorer: Explorer, rng: SplitMix64, fixtures: FloorFixtureField
+  ) -> FloorWorld {
     let walk = FloorWalk(
       maze: world.walk.maze,
       explorer: explorer,
       rng: rng,
       steps: world.walk.steps + 1
     )
-    return FloorWorld(course: world.course, walk: walk)
+    return FloorWorld(course: world.course, walk: walk, fixtures: fixtures, aim: world.aim)
+  }
+
+  private static func retarget(_ world: FloorWorld, aim: WalkAim) -> FloorWorld {
+    FloorWorld(course: world.course, walk: world.walk, fixtures: world.fixtures, aim: aim)
   }
 
   private static func carved(seed: Seed, span: GridSpan) -> MazePlan {
