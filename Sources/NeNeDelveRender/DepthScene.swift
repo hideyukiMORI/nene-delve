@@ -280,6 +280,19 @@ struct DepthScene {
       sealed(fixture)
     case .pit:
       armed(fixture)
+    case .warp:
+      via(fixture)
+    }
+  }
+
+  private func via(_ fixture: FloorFixture) -> Mark? {
+    switch fixture.phase {
+    case .sealed:
+      let phase = world.walk.steps + fixture.point.x + fixture.point.y
+      return Mark(
+        point: fixture.point, glyph: ScreenText.via(phase), foreground: palette.accent.hud)
+    case .bursting, .open:
+      return nil
     }
   }
 

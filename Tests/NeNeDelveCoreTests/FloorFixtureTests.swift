@@ -29,6 +29,8 @@ struct FloorFixtureTests {
         #expect(fixture.phase == .open)
       case .pit:
         #expect(fixture.phase == .sealed)
+      case .warp:
+        #expect(fixture.phase == .sealed)
       }
     }
     #expect(chests >= 1)
@@ -321,7 +323,7 @@ struct FloorFixtureTests {
       switch fixture.kind {
       case .pit:
         points.append(fixture.point)
-      case .chest, .lake:
+      case .chest, .lake, .warp:
         break
       }
     }
@@ -334,7 +336,7 @@ struct FloorFixtureTests {
       switch fixture.kind {
       case .lake:
         points.append(fixture.point)
-      case .chest, .pit:
+      case .chest, .pit, .warp:
         break
       }
     }
@@ -382,7 +384,7 @@ struct FloorFixtureTests {
         case .sealed, .bursting:
           return false
         }
-      case .lake, .pit:
+      case .lake, .pit, .warp:
         break
       }
     }

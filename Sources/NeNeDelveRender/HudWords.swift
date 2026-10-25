@@ -19,7 +19,7 @@ enum HudWords {
     return switch line.moment {
     case .pit, .engage:
       line.note
-    case .quiet, .descend, .ascend, .chest, .lake, .kill, .drove, .level, .faint, .low:
+    case .quiet, .descend, .ascend, .chest, .lake, .kill, .drove, .level, .faint, .low, .warp:
       0
     }
   }
@@ -81,7 +81,7 @@ enum HudWords {
     switch moment {
     case .pit, .engage, .faint, .low:
       .alarm
-    case .quiet, .descend, .ascend, .chest, .lake, .kill, .drove, .level:
+    case .quiet, .descend, .ascend, .chest, .lake, .kill, .drove, .level, .warp:
       .value
     }
   }

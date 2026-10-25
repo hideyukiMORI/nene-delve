@@ -110,12 +110,32 @@ public enum FloorReducer {
     if climbing(world, at: explorer.position) {
       return .ascended(arrived(world, explorer: explorer, rng: rng))
     }
+    if world.fixtures.exit(from: explorer.position) != nil {
+      return flung(world, explorer: explorer, rng: rng, aim: aim)
+    }
     let delver = DelverMoment.notice(world, explorer: explorer)
     let fixtures = aftermath(world, explorer: explorer)
     let step = Step(
       walk: walked(world, explorer: explorer, rng: rng), fixtures: fixtures, delver: delver,
       aim: aim
     )
+    return .running(commit(world, step))
+  }
+
+  private static func flung(
+    _ world: FloorWorld, explorer: Explorer, rng: SplitMix64, aim: WalkAim
+  ) -> FloorTick {
+    guard let far = world.fixtures.exit(from: explorer.position) else {
+      return .stuck
+    }
+    let landed = explorer.jump(to: far, maze: world.walk.maze)
+    let spoken = DelverMoment.glitch(world, place: far)
+    let field =
+      world.fixtures.jumped(from: explorer.position, to: far)
+      .hunted(far, in: world.walk.maze)
+      .encountered(far)
+    let step = Step(
+      walk: walked(world, explorer: landed, rng: rng), fixtures: field, delver: spoken, aim: aim)
     return .running(commit(world, step))
   }
 
@@ -210,7 +230,7 @@ public enum FloorReducer {
     if AscentSite.seeks(world) {
       return world.walk.maze.ends.ascent
     }
-    return nil
+    return world.fixtures.nearestWarp(to: world.walk.explorer.position)
   }
 
   private static func gate(_ world: FloorWorld) -> CellPoint? {

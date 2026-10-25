@@ -86,6 +86,9 @@ public enum FramePainter {
       if let spark = spark(world, point) {
         return spark
       }
+      if let flash = glitch(world, point) {
+        return flash
+      }
       if let beast = prowlerMark(world, point) {
         return beast
       }
@@ -119,6 +122,20 @@ public enum FramePainter {
       }
       return Cell(
         glyph: ScreenText.spark(burst.age), foreground: palette.accent.mark.loot,
+        background: palette.ink.background)
+    }
+
+    func glitch(_ world: FloorWorld, _ point: CellPoint) -> Cell? {
+      if world.course.delver.line.moment != .warp || world.fixtures.wade <= 0 {
+        return nil
+      }
+      let runner = world.walk.explorer.position
+      if abs(point.x - runner.x) + abs(point.y - runner.y) != 1 || !isOpen(world, point) {
+        return nil
+      }
+      let phase = world.walk.steps + point.x + point.y
+      return Cell(
+        glyph: ScreenText.glitch(phase), foreground: palette.accent.hud,
         background: palette.ink.background)
     }
 
@@ -221,6 +238,9 @@ public enum FramePainter {
           glyph: ScreenText.chest, foreground: palette.accent.mark.loot,
           background: palette.ink.background)
       }
+      if let pad = warp(world, point) {
+        return pad
+      }
       if world.fixtures.lake(at: point) {
         let phase = world.walk.steps + point.x + point.y
         return Cell(
@@ -229,6 +249,16 @@ public enum FramePainter {
       }
       let glyph = visited(world, point) ? ScreenText.trail : ScreenText.floor
       return Cell(glyph: glyph, foreground: palette.ink.floor, background: palette.ink.background)
+    }
+
+    func warp(_ world: FloorWorld, _ point: CellPoint) -> Cell? {
+      if !world.fixtures.warp(at: point) {
+        return nil
+      }
+      let phase = world.walk.steps + point.x + point.y
+      return Cell(
+        glyph: ScreenText.via(phase), foreground: palette.accent.hud,
+        background: palette.ink.background)
     }
 
     func pit(_ world: FloorWorld, _ point: CellPoint) -> Cell? {

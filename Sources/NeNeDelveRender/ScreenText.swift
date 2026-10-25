@@ -19,6 +19,7 @@ public enum ScreenText {
   public static let alarm: Character = "!"
   public static let pit: Character = "^"
   public static let wonder: Character = "?"
+  public static let warp: Character = "o"
 
   public static func spark(_ age: Int) -> Character {
     let marks = Array("*%~^")
@@ -35,6 +36,18 @@ public enum ScreenText {
   public static func clash(_ age: Int) -> Character {
     let marks = Array("*#%x")
     let index = age % marks.count
+    return marks[index]
+  }
+
+  public static func via(_ phase: Int) -> Character {
+    let marks = Array("o0")
+    let index = phase % marks.count
+    return marks[index]
+  }
+
+  public static func glitch(_ phase: Int) -> Character {
+    let marks = Array("o0#%")
+    let index = phase % marks.count
     return marks[index]
   }
 

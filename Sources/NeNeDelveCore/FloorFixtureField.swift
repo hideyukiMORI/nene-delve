@@ -36,20 +36,16 @@ public struct FloorFixtureField: Equatable, Sendable {
     let taken = chests.used + water.used
     let beasts = lurking(spots, taken: taken, rng: water.rng, depth: depth)
     let traps = pits(spots, taken: taken + beasts.used, rng: beasts.rng)
+    let pads = warps(spots, taken: taken + beasts.used + traps.used, rng: traps.rng)
     return FloorFixtureField(
-      fixtures: chests.fixtures + water.fixtures + traps.fixtures, wade: 0,
+      fixtures: chests.fixtures + water.fixtures + traps.fixtures + pads.fixtures, wade: 0,
       prowlers: beasts.prowlers
     )
   }
 
   public var holdsSealed: Bool {
-    for fixture in fixtures {
-      switch fixture.phase {
-      case .sealed, .bursting:
-        return true
-      case .open:
-        break
-      }
+    for fixture in fixtures where blocksStairs(fixture) {
+      return true
     }
     return false
   }
@@ -64,7 +60,7 @@ public struct FloorFixtureField: Equatable, Sendable {
         case .bursting, .open:
           return false
         }
-      case .lake, .pit:
+      case .lake, .pit, .warp:
         return false
       }
     }
@@ -81,11 +77,42 @@ public struct FloorFixtureField: Equatable, Sendable {
         case .bursting, .open:
           return false
         }
-      case .chest, .lake:
+      case .chest, .lake, .warp:
         return false
       }
     }
     return false
+  }
+
+  public func warp(at point: CellPoint) -> Bool {
+    for fixture in fixtures where fixture.point == point {
+      return armed(fixture)
+    }
+    return false
+  }
+
+  public func exit(from point: CellPoint) -> CellPoint? {
+    if !warp(at: point) {
+      return nil
+    }
+    for fixture in fixtures where fixture.point != point && armed(fixture) {
+      return fixture.point
+    }
+    return nil
+  }
+
+  public func nearestWarp(to origin: CellPoint) -> CellPoint? {
+    var best: CellPoint?
+    var bestDistance = 0
+    for fixture in fixtures {
+      if let distance = warpDistance(fixture, origin: origin) {
+        if best == nil || distance < bestDistance {
+          best = fixture.point
+          bestDistance = distance
+        }
+      }
+    }
+    return best
   }
 
   public func nearestSealed(to origin: CellPoint) -> CellPoint? {
@@ -119,7 +146,7 @@ public struct FloorFixtureField: Equatable, Sendable {
       switch fixture.kind {
       case .lake:
         return true
-      case .chest, .pit:
+      case .chest, .pit, .warp:
         return false
       }
     }
@@ -132,7 +159,7 @@ public struct FloorFixtureField: Equatable, Sendable {
       switch fixture.kind {
       case .lake:
         points.append(fixture.point)
-      case .chest, .pit:
+      case .chest, .pit, .warp:
         break
       }
     }
@@ -218,6 +245,11 @@ public struct FloorFixtureField: Equatable, Sendable {
     copied(fixtures: fixtures.map { openedPit($0, at: point) }, wade: FloorFixture.snareSpan)
   }
 
+  public func jumped(from origin: CellPoint, to exit: CellPoint) -> FloorFixtureField {
+    copied(
+      fixtures: fixtures.map { spent($0, origin: origin, exit: exit) }, wade: FloorFixture.warpSpan)
+  }
+
   public func cleared(_ foe: FloorProwler) -> FloorFixtureField {
     var left: [FloorProwler] = []
     for step in prowlers where step.point != foe.point {
@@ -299,8 +331,55 @@ public struct FloorFixtureField: Equatable, Sendable {
       case .bursting, .open:
         return nil
       }
-    case .lake, .pit:
+    case .lake, .pit, .warp:
       return nil
+    }
+  }
+
+  private func blocksStairs(_ fixture: FloorFixture) -> Bool {
+    switch fixture.kind {
+    case .warp:
+      return false
+    case .chest, .lake, .pit:
+      switch fixture.phase {
+      case .sealed, .bursting:
+        return true
+      case .open:
+        return false
+      }
+    }
+  }
+
+  private func armed(_ fixture: FloorFixture) -> Bool {
+    switch fixture.kind {
+    case .warp:
+      switch fixture.phase {
+      case .sealed:
+        return true
+      case .bursting, .open:
+        return false
+      }
+    case .chest, .lake, .pit:
+      return false
+    }
+  }
+
+  private func warpDistance(_ fixture: FloorFixture, origin: CellPoint) -> Int? {
+    if !armed(fixture) {
+      return nil
+    }
+    return abs(fixture.point.x - origin.x) + abs(fixture.point.y - origin.y)
+  }
+
+  private func spent(_ fixture: FloorFixture, origin: CellPoint, exit: CellPoint) -> FloorFixture {
+    switch fixture.kind {
+    case .warp:
+      if fixture.point == origin || fixture.point == exit {
+        return FloorFixture(point: fixture.point, kind: .warp, phase: .open)
+      }
+      return fixture
+    case .chest, .lake, .pit:
+      return fixture
     }
   }
 
@@ -323,7 +402,7 @@ public struct FloorFixtureField: Equatable, Sendable {
     switch fixture.kind {
     case .pit:
       return FloorFixture(point: fixture.point, kind: fixture.kind, phase: .open)
-    case .chest, .lake:
+    case .chest, .lake, .warp:
       return fixture
     }
   }
@@ -474,6 +553,41 @@ public struct FloorFixtureField: Equatable, Sendable {
     let origin = open[Int(indexRoll % UInt64(open.count))]
     let trap = FloorFixture(point: origin, kind: .pit, phase: .sealed)
     return Pick(fixtures: [trap], used: [origin], rng: after)
+  }
+
+  /// 罠のあと。およそ 3 回に 1 回、空いた床の遠い対を一度だけ置く。
+  private static func warps(_ spots: [CellPoint], taken: [CellPoint], rng: SplitMix64) -> Pick {
+    let (roll, next) = rng.next()
+    if roll % 3 != 0 {
+      return Pick(fixtures: [], used: [], rng: next)
+    }
+    let open = unused(spots, taken: taken)
+    if open.count < 2 {
+      return Pick(fixtures: [], used: [], rng: next)
+    }
+    let (indexRoll, after) = next.next()
+    let origin = open[Int(indexRoll % UInt64(open.count))]
+    guard let other = farthest(open, from: origin) else {
+      return Pick(fixtures: [], used: [], rng: after)
+    }
+    let pads = [
+      FloorFixture(point: origin, kind: .warp, phase: .sealed),
+      FloorFixture(point: other, kind: .warp, phase: .sealed),
+    ]
+    return Pick(fixtures: pads, used: [origin, other], rng: after)
+  }
+
+  private static func farthest(_ spots: [CellPoint], from origin: CellPoint) -> CellPoint? {
+    var chosen: CellPoint?
+    var best = -1
+    for spot in spots where spot != origin {
+      let distance = abs(spot.x - origin.x) + abs(spot.y - origin.y)
+      if distance > best {
+        chosen = spot
+        best = distance
+      }
+    }
+    return chosen
   }
 
   /// つながった水面のうち、隣の水面が一番多いマスを石にする。同点は掘り始め側。
