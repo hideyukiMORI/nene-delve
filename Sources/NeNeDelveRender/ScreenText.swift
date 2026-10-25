@@ -11,6 +11,7 @@ public enum ScreenText {
   public static let dash: Character = "-"
   public static let floor: Character = " "
   public static let trail: Character = "."
+  public static let grit: Character = ","
   public static let runner: Character = "@"
   public static let stairs: Character = ">"
   public static let ascent: Character = "<"
