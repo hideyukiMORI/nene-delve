@@ -366,14 +366,14 @@ struct NeneDelveMain {
     }
     if state.view == .depth {
       let paced = WalkLine.continues(world) ? StepPace.dash.milliseconds : DepthHold.settled
-      return WalkTempo.lengthened(world, from: paced)
+      return WalkTempo.chosen(world, from: paced)
     }
-    return WalkTempo.lengthened(world, from: WalkLine.milliseconds(world))
+    return WalkTempo.chosen(world, from: WalkLine.milliseconds(world))
   }
 
   private static func glideHold(_ world: FloorWorld) -> Int {
     let paced = WalkLine.continues(world) ? StepPace.dash.milliseconds : DepthHold.slice
-    return WalkTempo.lengthened(world, from: paced)
+    return WalkTempo.chosen(world, from: paced)
   }
 
   private static func retarget(_ state: inout Loop, before: FloorWorld?) {
