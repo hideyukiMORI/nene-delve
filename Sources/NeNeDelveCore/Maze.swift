@@ -47,6 +47,25 @@ public struct Maze: Equatable, Sendable {
     return Maze(span: span, tiles: next, plate: kept, kind: kind)
   }
 
+  func opening(_ points: [CellPoint]) -> Maze {
+    if points.isEmpty {
+      return self
+    }
+    var next = tiles
+    var opened = dug
+    for point in points where span.contains(point) {
+      switch tile(at: point) {
+      case .wall:
+        next[span.offset(point)] = .floor
+        opened.append(point)
+      case .floor, .stairs:
+        break
+      }
+    }
+    let plate = MazePlate(ends: ends, dug: opened)
+    return Maze(span: span, tiles: next, plate: plate, kind: kind)
+  }
+
   init(span: GridSpan, tiles: [Tile], ends: MazeEnds, kind: MazeKind) {
     self.init(span: span, tiles: tiles, plate: MazePlate(ends: ends), kind: kind)
   }

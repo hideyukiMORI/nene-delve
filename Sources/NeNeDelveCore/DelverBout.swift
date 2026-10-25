@@ -35,7 +35,7 @@ enum DelverBout {
     if hurt.hitPoints == 0 {
       return fainted(world, foe: foe, vitals: hurt)
     }
-    if age == FloorProwler.fightSpan - 1 {
+    if age == FloorProwler.fightSpan - 1 && !foe.boss {
       return drove(world, foe: foe, vitals: hurt)
     }
     return trading(world, foe: foe, age: age, after: hurt)

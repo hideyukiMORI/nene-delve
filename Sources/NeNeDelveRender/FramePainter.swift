@@ -330,11 +330,12 @@ public enum FramePainter {
     }
 
     func beastGlyph(_ beast: FloorProwler, steps: Int) -> Character {
+      let body = beast.boss ? ScreenText.boss : ScreenText.prowler
       switch beast.mood {
       case .blink:
-        steps.isMultiple(of: 2) ? ScreenText.prowler : ScreenText.alarm
+        return steps.isMultiple(of: 2) ? body : ScreenText.alarm
       case .fight, .flee, .gone:
-        ScreenText.prowler
+        return body
       }
     }
 

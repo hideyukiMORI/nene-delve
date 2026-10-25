@@ -189,13 +189,15 @@ public enum FloorReducer {
   {
     let marked = stamped(maze, floor: floor)
     let floorSeed = launchSeed.forFloor(floor)
-    let explorer = Explorer.begin(marked)
+    let field = FloorFixtureField.placed(in: marked, seed: floorSeed, depth: floor.depth)
+    let hall = BossHall.carve(marked, depth: floor.depth)
+    let explorer = Explorer.begin(hall.maze)
     let pin = DelverLine.QuipPin(seed: launchSeed, floor: floor, place: explorer.position)
     let course = FloorCourse(
       launchSeed: launchSeed, floor: floor, pace: pace, delver: Delver.fresh(pin))
     let walk = FloorWalk(
-      maze: marked, explorer: explorer, rng: SplitMix64(seed: floorSeed), steps: 0)
-    let fixtures = FloorFixtureField.placed(in: marked, seed: floorSeed, depth: floor.depth)
+      maze: hall.maze, explorer: explorer, rng: SplitMix64(seed: floorSeed), steps: 0)
+    let fixtures = field.posting(hall.stand, depth: floor.depth)
     return FloorWorld(course: course, walk: walk, fixtures: fixtures, aim: .explore)
   }
 
@@ -226,6 +228,9 @@ public enum FloorReducer {
   private static func lure(_ world: FloorWorld) -> CellPoint? {
     if let chest = world.fixtures.nearestSealed(to: world.walk.explorer.position) {
       return chest
+    }
+    if let boss = world.fixtures.nearestBoss(to: world.walk.explorer.position) {
+      return boss
     }
     if AscentSite.seeks(world) {
       return world.walk.maze.ends.ascent
