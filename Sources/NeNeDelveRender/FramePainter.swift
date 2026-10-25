@@ -8,8 +8,10 @@ public enum FramePainter {
       return CellGrid(span: canvas, cells: [])
     }
     let palette = ThemePalette.palette(look.theme)
+    let shown = revealed(world, frame: look.dug)
     var job = Job(
-      palette: palette, canvas: canvas, cells: Array(repeating: palette.blank, count: canvas.count))
+      palette: palette, canvas: canvas,
+      cells: Array(repeating: palette.blank, count: canvas.count), digging: look.dug != nil)
     let brief = HudBrief(
       clock: clock, floor: world.course.floor, look: look, delver: world.course.delver)
     let hud = HudLayout.make(brief, width: canvas.width, step: world.walk.steps)
@@ -20,18 +22,30 @@ public enum FramePainter {
     }
     switch look.view {
     case .plan:
-      job.writeMaze(world)
+      job.writeMaze(shown)
     case .depth:
-      var scene = DepthScene(world: world, palette: palette, canvas: canvas, gaze: look.gaze)
+      var scene = DepthScene(world: shown, palette: palette, canvas: canvas, look: look)
       scene.paint(into: &job.cells)
     }
     return CellGrid(span: canvas, cells: job.cells)
+  }
+
+  private static func revealed(_ world: FloorWorld, frame: Int?) -> FloorWorld {
+    guard let frame else {
+      return world
+    }
+    let walk = FloorWalk(
+      maze: DigReveal.maze(world.walk.maze, frame: frame), explorer: world.walk.explorer,
+      rng: world.walk.rng, steps: world.walk.steps)
+    return FloorWorld(
+      course: world.course, walk: walk, fixtures: world.fixtures, aim: world.aim)
   }
 
   private struct Job {
     let palette: ThemePalette
     let canvas: GridSpan
     var cells: [Cell]
+    let digging: Bool
 
     mutating func writeHud(_ cells: [HudCell], row: Int) {
       if row < 0 || row >= canvas.height {
@@ -140,7 +154,7 @@ public enum FramePainter {
     }
 
     func wall(_ world: FloorWorld, point: CellPoint) -> Cell {
-      if DeadEnd.cap(world) == point {
+      if !digging, DeadEnd.cap(world) == point {
         return Cell(
           glyph: ScreenText.wonder, foreground: palette.ink.runner,
           background: palette.ink.background)
@@ -275,6 +289,9 @@ public enum FramePainter {
     }
 
     func prowlerMark(_ world: FloorWorld, _ point: CellPoint) -> Cell? {
+      if world.walk.maze.tile(at: point) == .wall {
+        return nil
+      }
       if let flash = clash(world, point) {
         return flash
       }

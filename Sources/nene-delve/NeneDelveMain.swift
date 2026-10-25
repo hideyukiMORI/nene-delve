@@ -24,11 +24,13 @@ struct NeneDelveMain {
     let world: FloorWorld
     let along: Double
     let horizon: Int
+    let dug: Int?
 
-    init(world: FloorWorld, along: Double, horizon: Int = 0) {
+    init(world: FloorWorld, along: Double, horizon: Int = 0, dug: Int? = nil) {
       self.world = world
       self.along = along
       self.horizon = horizon
+      self.dug = dug
     }
   }
 
@@ -52,6 +54,8 @@ struct NeneDelveMain {
     var phase: Phase
     var slice: Int
     var hold: Int
+    /// 掘り終わったあとに、完成した階を 167ms 見せる。
+    var seal: Bool
 
     enum Phase {
       case show
@@ -60,6 +64,7 @@ struct NeneDelveMain {
       case glide
       case dip
       case step
+      case dig
     }
   }
 
@@ -117,7 +122,7 @@ struct NeneDelveMain {
     let origin = monotonic()
     let play = Play(seed: seed, origin: origin, stage: origin, theme: .neonGrid)
     var state = Loop(world: nil, play: play, view: .plan, facing: .north)
-    var beat = Beat(phase: .show, slice: 0, hold: StepPace.explore.milliseconds)
+    var beat = Beat(phase: .dig, slice: 0, hold: 0, seal: false)
     while true {
       if !steer(terminal.pollKey(), state: &state) {
         return 0
@@ -175,7 +180,7 @@ struct NeneDelveMain {
 
   private static func park(_ phase: Beat.Phase) -> Beat.Phase {
     switch phase {
-    case .show, .decide, .step, .dip:
+    case .show, .decide, .step, .dip, .dig:
       phase
     case .turn, .glide:
       .show
@@ -201,6 +206,8 @@ struct NeneDelveMain {
       return dip(&terminal, stage: stage, state: &state, beat: &beat)
     case .step:
       return advance(&terminal, stage: stage, state: &state, beat: &beat)
+    case .dig:
+      return dig(&terminal, stage: stage, state: &state, beat: &beat)
     }
   }
 
@@ -326,8 +333,15 @@ struct NeneDelveMain {
     let code = step(&terminal, columns: stage.columns, world: &current, state: &state)
     state.world = current
     retarget(&state, before: seen)
+    beat.slice = 0
+    let hold = landed(code, depth: depth, state: state)
+    beat.hold = hold
+    if hold == DepthHold.settled {
+      beat.phase = .dig
+      beat.seal = false
+      return code
+    }
     beat.phase = .show
-    beat.hold = landed(code, depth: depth, state: state)
     return code
   }
 
@@ -459,7 +473,7 @@ struct NeneDelveMain {
     let grid = FramePainter.paint(
       world: frame.world,
       clock: hud(state: state),
-      look: FrameLook(theme: state.play.theme, view: state.view, gaze: gaze),
+      look: FrameLook(theme: state.play.theme, view: state.view, gaze: gaze, dug: frame.dug),
       canvas: canvas
     )
     terminal.present(grid)
@@ -527,12 +541,66 @@ struct NeneDelveMain {
     state.world = current
     retarget(&state, before: seen)
     beat.slice = 0
-    beat.phase = .show
-    beat.hold = landed(code, depth: depth, state: state)
-    guard code == nil, let shown = state.world, shown.course.floor.depth != depth else {
-      return code
+    let hold = landed(code, depth: depth, state: state)
+    if hold == DepthHold.settled {
+      beat.phase = .dig
+      beat.seal = true
+      beat.hold = 0
+      return nil
     }
-    present(&terminal, frame: Frame(world: shown, along: 0), columns: stage.columns, state: state)
+    beat.phase = .show
+    beat.seal = false
+    beat.hold = hold
+    return code
+  }
+
+  private static func dig(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
+  ) -> Int32? {
+    switch ready(&terminal, stage: stage, state: &state) {
+    case .skip:
+      beat.hold = wait(state)
+      return nil
+    case .stop:
+      return 1
+    case .world:
+      return uncover(&terminal, stage: stage, state: state, beat: &beat)
+    }
+  }
+
+  private static func uncover(
+    _ terminal: inout TerminalSession, stage: Stage, state: Loop, beat: inout Beat
+  ) -> Int32? {
+    guard let current = state.world else {
+      return 1
+    }
+    if current.walk.maze.dug.isEmpty || beat.slice >= DigReveal.frames {
+      return finishDig(&terminal, stage: stage, state: state, beat: &beat)
+    }
+    let frame = Frame(world: current, along: 0, dug: beat.slice)
+    present(&terminal, frame: frame, columns: stage.columns, state: state)
+    beat.hold = DepthHold.slice
+    beat.slice += 1
+    return nil
+  }
+
+  private static func finishDig(
+    _ terminal: inout TerminalSession, stage: Stage, state: Loop, beat: inout Beat
+  ) -> Int32? {
+    guard let current = state.world else {
+      return 1
+    }
+    beat.slice = 0
+    beat.phase = .show
+    if beat.seal {
+      present(
+        &terminal, frame: Frame(world: current, along: 0), columns: stage.columns, state: state)
+      beat.hold = DepthHold.settled
+      beat.seal = false
+      return nil
+    }
+    beat.hold = 0
+    beat.seal = false
     return nil
   }
 

@@ -2,6 +2,7 @@ struct CarveState {
   private var tiles: [Tile]
   private var stack: [CellPoint]
   private var last: CellPoint
+  private var dug: [CellPoint]
   private var rng: SplitMix64
   private let span: GridSpan
 
@@ -11,6 +12,7 @@ struct CarveState {
     let start = CellPoint(x: 1, y: 1)
     stack = [start]
     last = start
+    dug = [start]
     rng = SplitMix64(seed: seed)
     tiles[span.offset(start)] = .floor
   }
@@ -25,7 +27,8 @@ struct CarveState {
     var finished = tiles
     finished[span.offset(last)] = .stairs
     let ends = MazeEnds(start: CellPoint(x: 1, y: 1), stairs: last)
-    return Maze(span: span, tiles: finished, ends: ends, kind: .filledGrid)
+    let plate = MazePlate(ends: ends, dug: dug)
+    return Maze(span: span, tiles: finished, plate: plate, kind: .filledGrid)
   }
 
   private mutating func carve(_ room: CellPoint) {
@@ -69,6 +72,8 @@ struct CarveState {
     let between = CellPoint(x: (room.x + next.x) / 2, y: (room.y + next.y) / 2)
     tiles[span.offset(between)] = .floor
     tiles[span.offset(next)] = .floor
+    dug.append(between)
+    dug.append(next)
   }
 
   private mutating func shuffled() -> [Direction] {
