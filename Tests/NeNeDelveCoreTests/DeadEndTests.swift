@@ -6,14 +6,14 @@ struct DeadEndTests {
   @Test func aTipMarksTheWallAhead() {
     let world = tip()
     #expect(DeadEnd.cap(world) == CellPoint(x: 3, y: 2))
-    let waited = WalkTempo.lengthened(world, from: StepPace.dash.milliseconds)
+    let waited = WalkTempo.chosen(world, from: StepPace.dash.milliseconds)
     #expect(waited == StepPace.wonder.milliseconds)
   }
 
   @Test func anOpenEntranceIsNotADeadEnd() {
     let world = entrance()
     #expect(DeadEnd.cap(world) == nil)
-    let waited = WalkTempo.lengthened(world, from: StepPace.dash.milliseconds)
+    let waited = WalkTempo.chosen(world, from: StepPace.dash.milliseconds)
     #expect(waited == StepPace.dash.milliseconds)
   }
 
@@ -21,13 +21,13 @@ struct DeadEndTests {
     let world = tip(hold: 1)
     #expect(DeadEnd.cap(world) == CellPoint(x: 3, y: 2))
     #expect(!DeadEnd.leaving(world))
-    let waited = WalkTempo.lengthened(world, from: StepPace.explore.milliseconds)
+    let waited = WalkTempo.chosen(world, from: StepPace.explore.milliseconds)
     #expect(waited == StepPace.explore.milliseconds)
   }
 
   @Test func aLongerWaitStaysLongerAtTheTip() {
     let world = tip()
-    #expect(WalkTempo.lengthened(world, from: 200) == 200)
+    #expect(WalkTempo.chosen(world, from: 200) == 200)
   }
 
   private func tip(hold: Int = 0) -> FloorWorld {

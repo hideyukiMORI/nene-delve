@@ -24,21 +24,21 @@ struct RoomSpanTests {
     let world = room(
       path: [CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1)], next: CellPoint(x: 3, y: 1))
     #expect(RoomSpan.crossing(world))
-    let waited = WalkTempo.lengthened(world, from: StepPace.dash.milliseconds)
+    let waited = WalkTempo.chosen(world, from: StepPace.dash.milliseconds)
     #expect(waited == StepPace.linger.milliseconds)
   }
 
   @Test func aLongerWaitStaysLonger() {
     let world = room(
       path: [CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1)], next: CellPoint(x: 3, y: 1))
-    #expect(WalkTempo.lengthened(world, from: 167) == 167)
+    #expect(WalkTempo.chosen(world, from: 167) == 167)
   }
 
   @Test func aFightInARoomKeepsTheFloorPace() {
     let world = room(
       path: [CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1)], next: CellPoint(x: 3, y: 1), hold: 1)
     #expect(!RoomSpan.crossing(world))
-    let waited = WalkTempo.lengthened(world, from: StepPace.explore.milliseconds)
+    let waited = WalkTempo.chosen(world, from: StepPace.explore.milliseconds)
     #expect(waited == StepPace.explore.milliseconds)
   }
 
@@ -46,7 +46,7 @@ struct RoomSpanTests {
     let world = lane(
       path: [CellPoint(x: 1, y: 2), CellPoint(x: 2, y: 2)], next: CellPoint(x: 3, y: 2))
     #expect(!RoomSpan.crossing(world))
-    let waited = WalkTempo.lengthened(world, from: StepPace.dash.milliseconds)
+    let waited = WalkTempo.chosen(world, from: StepPace.dash.milliseconds)
     #expect(waited == StepPace.dash.milliseconds)
   }
 

@@ -1,6 +1,9 @@
-/// 部屋の一歩だけ、すでに決まっている待ちを 112ms まで延ばす。
+/// 階段の手前は短くし、行き止まりと部屋は延ばす。
 public enum WalkTempo {
-  public static func lengthened(_ world: FloorWorld, from paced: Int) -> Int {
+  public static func chosen(_ world: FloorWorld, from paced: Int) -> Int {
+    if StairApproach.closing(world) && paced > StepPace.sprint.milliseconds {
+      return StepPace.sprint.milliseconds
+    }
     if DeadEnd.leaving(world) && paced < StepPace.wonder.milliseconds {
       return StepPace.wonder.milliseconds
     }
