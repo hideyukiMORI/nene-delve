@@ -18,6 +18,7 @@ struct DepthScene {
     edges(hits, height: height, into: &cells)
     stair(hits, height: height, into: &cells)
     stampMarks(distances, height: height, into: &cells)
+    wonder(hits, height: height, into: &cells)
   }
 
   private struct Slice {
@@ -164,6 +165,38 @@ struct DepthScene {
     put(
       Cell(glyph: ScreenText.stairs, foreground: palette.ink.background, background: tone),
       column: column, row: (plane.top + plane.bottom) / 2, into: &cells)
+  }
+
+  private func wonder(_ hits: [DepthHit], height: Int, into cells: inout [Cell]) {
+    guard let cap = DeadEnd.cap(world), let column = capColumn(hits, cap) else {
+      return
+    }
+    let plane = DepthPlane.across(hits[column].distance, viewHeight: height)
+    if plane.bottom < plane.top {
+      return
+    }
+    let tone = DepthTone.face(palette.ink.wall, vertical: hits[column].vertical)
+    put(
+      Cell(glyph: ScreenText.wonder, foreground: palette.ink.background, background: tone),
+      column: column, row: (plane.top + plane.bottom) / 2, into: &cells)
+  }
+
+  private func capColumn(_ hits: [DepthHit], _ cap: CellPoint) -> Int? {
+    var chosen: Int?
+    var gap = Int.max
+    let center = hits.count / 2
+    var column = 0
+    while column < hits.count {
+      if hits[column].point == cap {
+        let next = abs(column - center)
+        if chosen == nil || next < gap {
+          chosen = column
+          gap = next
+        }
+      }
+      column += 1
+    }
+    return chosen
   }
 
   private func stairColumn(_ hits: [DepthHit]) -> Int? {

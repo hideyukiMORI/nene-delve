@@ -116,7 +116,12 @@ public enum FramePainter {
     }
 
     func wall(_ world: FloorWorld, point: CellPoint) -> Cell {
-      Cell(
+      if DeadEnd.cap(world) == point {
+        return Cell(
+          glyph: ScreenText.wonder, foreground: palette.ink.runner,
+          background: palette.ink.background)
+      }
+      return Cell(
         glyph: wallGlyph(world, point: point), foreground: palette.ink.wall,
         background: palette.ink.background)
     }

@@ -17,6 +17,7 @@ public enum ScreenText {
   public static let prowler: Character = "&"
   public static let alarm: Character = "!"
   public static let pit: Character = "^"
+  public static let wonder: Character = "?"
 
   public static func spark(_ age: Int) -> Character {
     let marks = Array("*%~^")
