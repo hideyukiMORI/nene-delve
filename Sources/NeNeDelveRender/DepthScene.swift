@@ -19,6 +19,7 @@ struct DepthScene {
     stair(hits, height: height, into: &cells)
     stampMarks(distances, height: height, into: &cells)
     wonder(hits, height: height, into: &cells)
+    grit(hits, into: &cells)
   }
 
   private struct Slice {
@@ -381,6 +382,29 @@ struct DepthScene {
       return cells[canvas.offset(point)].background
     }
     return palette.ink.background
+  }
+
+  private func grit(_ hits: [DepthHit], into cells: inout [Cell]) {
+    let found = DepthGrain.dots(
+      maze: world.walk.maze, gaze: look.gaze, span: canvas, hits: hits)
+    var index = 0
+    while index < found.count {
+      place(found[index], into: &cells)
+      index += 1
+    }
+  }
+
+  private func place(_ dot: DepthGrain.Dot, into cells: inout [Cell]) {
+    let point = CellPoint(x: dot.column, y: dot.row + ScreenText.hudRows)
+    if !canvas.contains(point) {
+      return
+    }
+    let behind = cells[canvas.offset(point)]
+    if behind.glyph != ScreenText.floor {
+      return
+    }
+    cells[canvas.offset(point)] = Cell(
+      glyph: ScreenText.grit, foreground: palette.ink.wall, background: behind.background)
   }
 
   private func put(_ cell: Cell, column: Int, row: Int, into cells: inout [Cell]) {
