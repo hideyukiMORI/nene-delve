@@ -264,7 +264,7 @@ struct NeneDelveMain {
       let along = Double(beat.slice + 1) / Double(DepthHold.slices + 1)
       present(
         &terminal, frame: Frame(world: current, along: along), columns: stage.columns, state: state)
-      beat.hold = DepthHold.slice
+      beat.hold = glideHold(current)
       if beat.slice + 1 >= DepthHold.slices {
         beat.phase = .step
         return nil
@@ -361,10 +361,23 @@ struct NeneDelveMain {
   }
 
   private static func wait(_ state: Loop) -> Int {
+    guard let world = state.world else {
+      return StepPace.explore.milliseconds
+    }
+    if WalkLine.continues(world) {
+      return StepPace.dash.milliseconds
+    }
     if state.view == .depth {
       return DepthHold.settled
     }
-    return state.world?.course.pace.milliseconds ?? StepPace.explore.milliseconds
+    return world.course.pace.milliseconds
+  }
+
+  private static func glideHold(_ world: FloorWorld) -> Int {
+    if WalkLine.continues(world) {
+      return StepPace.dash.milliseconds
+    }
+    return DepthHold.slice
   }
 
   private static func retarget(_ state: inout Loop, before: FloorWorld?) {

@@ -9,5 +9,6 @@ struct StepPaceTests {
     #expect(tiny.milliseconds == StepPace.explore.milliseconds)
     #expect(wide.milliseconds == StepPace.rush.milliseconds)
     #expect(wide.milliseconds < tiny.milliseconds)
+    #expect(StepPace.dash.milliseconds < StepPace.rush.milliseconds)
   }
 }

@@ -19,4 +19,5 @@ ADR は「なぜそう決めたか」「何を却下したか」を書く。
 | [0001](0001-strictness-is-mechanically-enforced.md) | 厳格さは機械で強制する | 受理 |
 | [0002](0002-swift-testing-only.md) | テスト枠組みは Swift Testing だけ | 受理 |
 | [0003](0003-gaze-and-visor.md) | 視線はフレームが持ち、HUD は 3 行の計器にする | 受理（HUD の行数と枠は 0004） |
-| [0004](0004-five-row-hud.md) | HUD は 5 行で、照準と雨を切り替える | 受理 |
+| [0004](0004-five-row-hud.md) | HUD は 5 行で、照準と雨を切り替える | 受理（直線の待ちは 0005） |
+| [0005](0005-straight-dash.md) | 直線の一歩だけ 14ms にする | 受理 |
