@@ -98,6 +98,9 @@ public enum FloorReducer {
     switch world.walk.explorer.move(to: next, maze: world.walk.maze) {
     case .moved(let explorer):
       return moved(world, explorer: explorer, rng: world.walk.rng, aim: .recover)
+    case .arrived(let explorer) where explorer.position == world.walk.maze.ends.ascent:
+      // 上りは下りへの通り道である。finish は探索の aim を残し、同じ一歩を繰り返す。
+      return moved(world, explorer: explorer, rng: world.walk.rng, aim: .recover)
     case .arrived(let explorer):
       return finish(world, explorer: explorer, rng: world.walk.rng)
     case .stuck:
