@@ -50,6 +50,7 @@ struct AscentSiteTests {
     }
     #expect(above.course.floor.depth == 2)
     #expect(above.course.delver.risen == 3)
+    #expect(above.course.delver.deepest == 3)
     #expect(above.course.delver.line.moment == .ascend)
     #expect(above.course.delver.line.note == 2)
     #expect(above.course.delver.vitals == stood.course.delver.vitals.rested())
@@ -118,6 +119,7 @@ struct AscentSiteTests {
     }
     #expect(above.walk.maze == direct.walk.maze)
     #expect(above.course.delver.risen == 3)
+    #expect(above.course.delver.deepest == 3)
     #expect(direct.walk.maze.ends.ascent != nil)
     #expect(!AscentSite.seeks(direct))
   }

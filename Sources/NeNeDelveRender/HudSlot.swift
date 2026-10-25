@@ -10,11 +10,12 @@ enum HudSlot: Equatable, Hashable {
   case view
   case vitals
   case theme
+  case record
   case floor
   case seed
 
   static let dropOrder: [HudSlot] = [
-    .date, .message, .stage, .elapsed, .place, .level, .facing, .clock, .view, .vitals, .theme,
-    .floor, .seed,
+    .date, .message, .stage, .elapsed, .record, .place, .level, .facing, .clock, .view, .vitals,
+    .theme, .floor, .seed,
   ]
 }

@@ -12,6 +12,7 @@ struct HudLayoutTests {
       #expect(row.count == 80)
     }
     #expect(shown.contains("B1F"))
+    #expect(shown.contains("*B1F"))
     #expect(shown.contains("N"))
     #expect(shown.contains("2D"))
     #expect(shown.contains("LV01"))
@@ -73,15 +74,45 @@ struct HudLayoutTests {
     #expect(!layout.rows[4].contains("2026-10-24"))
   }
 
+  @Test func theDeepestFloorSitsBesideTheCurrentFloor() {
+    let delver = Delver.quiet.reaching(7)
+    let layout = layout(9, width: 80, step: 0, delver: delver, floor: FloorIndex(depth: 3))
+    let shown = shown(layout)
+    #expect(shown.contains("B3F"))
+    #expect(shown.contains("*B7F"))
+    #expect(!shown.contains("*B3F"))
+  }
+
+  @Test func aNarrowLineKeepsTheSeedAheadOfTheRecord() {
+    let delver = Delver.quiet.reaching(7)
+    let layout = layout(
+      UInt64.max, width: 40, step: 0, delver: delver, floor: FloorIndex(depth: 3))
+    let shown = shown(layout)
+    #expect(shown.contains("(18446744073709551615)"))
+    #expect(shown.contains("B3F"))
+    #expect(shown.contains("X003"))
+    #expect(!shown.contains("*B7F"))
+    #expect(!shown.contains("1844674407370955161)"))
+    #expect(!shown.contains("1844674407370955161\n"))
+  }
+
   @Test func theFooterStaysWhileThePictureChanges() {
-    let aim = layout(9, width: 80, step: step(9, depth: 1, matching: { beat in
-      if case .aim = beat { return true }
-      return false
-    }))
-    let rain = layout(9, width: 80, step: step(9, depth: 1, matching: { beat in
-      if case .rain = beat { return true }
-      return false
-    }))
+    let aim = layout(
+      9, width: 80,
+      step: step(
+        9, depth: 1,
+        matching: { beat in
+          if case .aim = beat { return true }
+          return false
+        }))
+    let rain = layout(
+      9, width: 80,
+      step: step(
+        9, depth: 1,
+        matching: { beat in
+          if case .rain = beat { return true }
+          return false
+        }))
     #expect(aim.rows[4] == rain.rows[4])
     #expect(aim.rows[0] != rain.rows[0])
     #expect(rain.rows[0].contains(where: { $0.isLetter }))
@@ -90,9 +121,10 @@ struct HudLayoutTests {
 
   private func layout(
     _ raw: UInt64, theme: ThemeName = .neonGrid, view: ViewMode = .plan, width: Int, step: Int,
-    delver: Delver = .quiet
+    delver: Delver = .quiet, floor: FloorIndex = .first
   ) -> HudLayout {
-    HudLayout.make(brief(raw, theme: theme, view: view, delver: delver), width: width, step: step)
+    HudLayout.make(
+      brief(raw, theme: theme, view: view, delver: delver, floor: floor), width: width, step: step)
   }
 
   private func shown(_ layout: HudLayout) -> String {
@@ -117,9 +149,9 @@ struct HudLayoutTests {
   }
 
   private func brief(
-    _ raw: UInt64, theme: ThemeName, view: ViewMode, delver: Delver
+    _ raw: UInt64, theme: ThemeName, view: ViewMode, delver: Delver, floor: FloorIndex = .first
   ) -> HudBrief {
-    HudBrief(clock: clock(raw), floor: .first, look: look(theme, view: view), delver: delver)
+    HudBrief(clock: clock(raw), floor: floor, look: look(theme, view: view), delver: delver)
   }
 
   private func look(_ theme: ThemeName = .neonGrid, view: ViewMode = .plan) -> FrameLook {

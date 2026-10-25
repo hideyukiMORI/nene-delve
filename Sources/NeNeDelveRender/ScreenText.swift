@@ -69,6 +69,10 @@ public enum ScreenText {
     "B\(floor.depth)F"
   }
 
+  public static func recordLabel(_ depth: Int) -> String {
+    "*B\(max(depth, 1))F"
+  }
+
   public static func facingLine(_ facing: Direction) -> String {
     switch facing {
     case .north:
