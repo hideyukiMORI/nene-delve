@@ -141,6 +141,11 @@ public enum FloorReducer {
 
   private static func aftermath(_ world: FloorWorld, explorer: Explorer) -> FloorFixtureField {
     let place = explorer.position
+    if world.fixtures.mimic(at: place) {
+      let hunted = world.fixtures.hunted(place, in: world.walk.maze)
+      return hunted.bitten(at: place, depth: world.course.floor.depth, in: world.walk.maze)
+        .encountered(place)
+    }
     let opened =
       world.fixtures.sealed(at: place) ? world.fixtures.beginBurst(at: place) : world.fixtures
     let sprung = world.fixtures.pit(at: place) ? opened.spring(at: place) : opened

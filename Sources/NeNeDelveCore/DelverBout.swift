@@ -92,7 +92,9 @@ enum DelverBout {
   ) -> DelverLine {
     let pin = pin(world)
     if age == 0 {
-      return DelverLine.say(.engage, pin: pin, note: before.hitPoints - after.hitPoints)
+      let biting = world.fixtures.fighting()?.mimic == true
+      let moment: DelverLine.Moment = biting ? .mimic : .engage
+      return DelverLine.say(moment, pin: pin, note: before.hitPoints - after.hitPoints)
     }
     if after.hitPoints * 2 <= after.hitMax && before.hitPoints * 2 > before.hitMax {
       return DelverLine.say(.low, pin: pin, note: after.hitPoints)

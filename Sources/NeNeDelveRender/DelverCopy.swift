@@ -38,6 +38,8 @@ enum DelverCopy {
       "EXP+" + String(spoken.note)
     case .pit, .engage:
       "HP-" + String(spoken.note)
+    case .mimic:
+      spoken.note > 0 ? "HP-" + String(spoken.note) : ""
     case .level:
       "LV" + String(spoken.note)
     case .faint:
@@ -75,6 +77,8 @@ enum DelverCopy {
       "HP LOW"
     case .warp:
       "VIA o"
+    case .mimic:
+      "MIMIC $"
     }
   }
 
@@ -106,6 +110,8 @@ enum DelverCopy {
       ["ﾔﾊﾞｲ", "ｲﾀｲ", "ﾑﾘ"]
     case .warp:
       ["ｽﾞﾚﾀ", "ﾅﾆｺﾚ", "ﾋﾞｶｯ"]
+    case .mimic:
+      ["ﾊｺｼﾞｬﾈｴ", "ｶﾐﾂｲﾀ", "ｳｿﾀﾞﾛ"]
     }
   }
 }

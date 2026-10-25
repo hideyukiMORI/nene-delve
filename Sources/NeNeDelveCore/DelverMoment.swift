@@ -2,6 +2,9 @@
 enum DelverMoment {
   static func notice(_ world: FloorWorld, explorer: Explorer) -> Delver {
     let place = explorer.position
+    if world.fixtures.mimic(at: place) {
+      return bite(world, place: place)
+    }
     if world.fixtures.sealed(at: place) {
       return loot(world, place: place)
     }
@@ -14,6 +17,11 @@ enum DelverMoment {
       return wet(world, place: place)
     }
     return world.course.delver.aged()
+  }
+
+  private static func bite(_ world: FloorWorld, place: CellPoint) -> Delver {
+    let line = DelverLine.say(.mimic, pin: pin(world, place: place), note: 0)
+    return world.course.delver.carrying(vitals: world.course.delver.vitals, line: line)
   }
 
   private static func loot(_ world: FloorWorld, place: CellPoint) -> Delver {

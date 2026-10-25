@@ -27,9 +27,13 @@ public struct FloorFixture: Equatable, Sendable {
   public let kind: Kind
   public let phase: Phase
 
-  public init(point: CellPoint, kind: Kind, phase: Phase) {
+  /// この宝箱は噛みつく。封印中の記号は普通の宝箱と同じ。
+  public let mimic: Bool
+
+  public init(point: CellPoint, kind: Kind, phase: Phase, mimic: Bool = false) {
     self.point = point
     self.kind = kind
     self.phase = phase
+    self.mimic = mimic
   }
 }

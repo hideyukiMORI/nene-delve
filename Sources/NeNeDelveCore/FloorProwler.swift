@@ -15,6 +15,9 @@ public struct FloorProwler: Equatable, Sendable {
   public let life: Int
   public let boss: Bool
 
+  /// 宝箱から出た個体。追わず、6 拍ではボスのように残らない。
+  public let mimic: Bool
+
   /// 配置時は階の体力を渡す。省略した個体は 1 戦では倒れない。
   public init(point: CellPoint, chases: Bool, mood: Mood, life: Int = 48) {
     self.point = point
@@ -22,6 +25,7 @@ public struct FloorProwler: Equatable, Sendable {
     self.mood = mood
     self.life = life
     self.boss = false
+    self.mimic = false
   }
 
   /// 大部屋のボスは追わず、6 拍では退かない。
@@ -31,6 +35,17 @@ public struct FloorProwler: Equatable, Sendable {
     self.mood = mood
     self.life = life
     self.boss = true
+    self.mimic = false
+  }
+
+  /// 宝箱の隣へ飛び出す。体力は追わない敵と同じ式を渡す。
+  public init(mimicAt point: CellPoint, mood: Mood, life: Int) {
+    self.point = point
+    self.chases = false
+    self.mood = mood
+    self.life = life
+    self.boss = false
+    self.mimic = true
   }
 
   func near(_ runner: CellPoint) -> Bool {
@@ -82,6 +97,9 @@ public struct FloorProwler: Equatable, Sendable {
   private func copied(point: CellPoint, mood: Mood, life: Int) -> FloorProwler {
     if boss {
       return FloorProwler(bossAt: point, mood: mood, life: life)
+    }
+    if mimic {
+      return FloorProwler(mimicAt: point, mood: mood, life: life)
     }
     return FloorProwler(point: point, chases: chases, mood: mood, life: life)
   }
