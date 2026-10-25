@@ -223,6 +223,38 @@ struct FramePainterTests {
     #expect(shown.contains("&"))
   }
 
+  @Test func thePlanDrawsABossAsB() {
+    let maze = rectangle()
+    let spot = CellPoint(x: 4, y: 4)
+    let blinking = FloorProwler(bossAt: spot, mood: .blink, life: 40)
+    let quiet = FramePainter.paint(
+      world: haunted(maze, beast: blinking, steps: 0),
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    #expect(glyph(quiet, point: spot) == ScreenText.boss)
+    #expect(glyph(quiet, point: spot) != ScreenText.prowler)
+    let alarm = FramePainter.paint(
+      world: haunted(maze, beast: blinking, steps: 1),
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    #expect(glyph(alarm, point: spot) == ScreenText.alarm)
+    let fighting = FloorProwler(bossAt: spot, mood: .fight(1), life: 40)
+    let battle = FramePainter.paint(
+      world: haunted(maze, beast: fighting, steps: 1),
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    #expect(glyph(battle, point: spot) == ScreenText.boss)
+  }
+
+  @Test func depthShowsABossAsB() {
+    let maze = hall()
+    let beast = FloorProwler(bossAt: CellPoint(x: 6, y: 5), mood: .blink, life: 40)
+    let grid = FramePainter.paint(
+      world: stocked(maze, chest: CellPoint(x: 4, y: 5), beast: beast),
+      clock: sampleClock(),
+      look: eyed(maze), canvas: canvas(forMaze: maze))
+    let shown = picture(grid)
+    #expect(shown.contains("B"))
+    #expect(!shown.contains("&"))
+  }
+
   @Test func aSealedWarpBlinksOnThePlan() {
     let maze = rectangle()
     let pad = CellPoint(x: 4, y: 4)

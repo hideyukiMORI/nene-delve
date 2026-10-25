@@ -324,15 +324,15 @@ struct DepthScene {
     if world.walk.maze.tile(at: beast.point) == .wall {
       return nil
     }
+    let body = beast.boss ? ScreenText.boss : ScreenText.prowler
     switch beast.mood {
     case .gone:
       return nil
     case .blink:
-      let glyph = world.walk.steps.isMultiple(of: 2) ? ScreenText.prowler : ScreenText.alarm
+      let glyph = world.walk.steps.isMultiple(of: 2) ? body : ScreenText.alarm
       return Mark(point: beast.point, glyph: glyph, foreground: palette.accent.mark.threat)
     case .fight, .flee:
-      return Mark(
-        point: beast.point, glyph: ScreenText.prowler, foreground: palette.accent.mark.threat)
+      return Mark(point: beast.point, glyph: body, foreground: palette.accent.mark.threat)
     }
   }
 

@@ -46,6 +46,10 @@ public struct DelverVitals: Equatable, Sendable {
     14 + max(depth, 1) * 2 + (chases ? 4 : 0)
   }
 
+  public static func bossLife(depth: Int) -> Int {
+    foeLife(depth: depth, chases: true) * 2
+  }
+
   public static func foeBlow(depth: Int, chases: Bool) -> Int {
     let extra = max(0, depth - 1) / 2
     if chases {

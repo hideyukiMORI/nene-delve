@@ -13,6 +13,7 @@ public struct FloorProwler: Equatable, Sendable {
   public let chases: Bool
   public let mood: Mood
   public let life: Int
+  public let boss: Bool
 
   /// 配置時は階の体力を渡す。省略した個体は 1 戦では倒れない。
   public init(point: CellPoint, chases: Bool, mood: Mood, life: Int = 48) {
@@ -20,6 +21,16 @@ public struct FloorProwler: Equatable, Sendable {
     self.chases = chases
     self.mood = mood
     self.life = life
+    self.boss = false
+  }
+
+  /// 大部屋のボスは追わず、6 拍では退かない。
+  public init(bossAt point: CellPoint, mood: Mood, life: Int) {
+    self.point = point
+    self.chases = false
+    self.mood = mood
+    self.life = life
+    self.boss = true
   }
 
   func near(_ runner: CellPoint) -> Bool {
@@ -27,15 +38,15 @@ public struct FloorProwler: Equatable, Sendable {
   }
 
   func begun() -> FloorProwler {
-    FloorProwler(point: point, chases: chases, mood: .fight(0), life: life)
+    copied(point: point, mood: .fight(0), life: life)
   }
 
   func wounded(_ damage: Int) -> FloorProwler {
-    FloorProwler(point: point, chases: chases, mood: mood, life: life - max(damage, 0))
+    copied(point: point, mood: mood, life: life - max(damage, 0))
   }
 
   func fleeing() -> FloorProwler {
-    FloorProwler(point: point, chases: chases, mood: .flee(0), life: life)
+    copied(point: point, mood: .flee(0), life: life)
   }
 
   func aged(in maze: Maze, runner: CellPoint) -> FloorProwler {
@@ -65,27 +76,34 @@ public struct FloorProwler: Equatable, Sendable {
     if step == runner {
       return self
     }
-    return FloorProwler(point: step, chases: chases, mood: mood, life: life)
+    return copied(point: step, mood: mood, life: life)
+  }
+
+  private func copied(point: CellPoint, mood: Mood, life: Int) -> FloorProwler {
+    if boss {
+      return FloorProwler(bossAt: point, mood: mood, life: life)
+    }
+    return FloorProwler(point: point, chases: chases, mood: mood, life: life)
   }
 
   private func struck(_ age: Int) -> FloorProwler {
     let next = age + 1
-    if next < Self.fightSpan {
-      return FloorProwler(point: point, chases: chases, mood: .fight(next), life: life)
+    if next < Self.fightSpan || boss {
+      return copied(point: point, mood: .fight(next), life: life)
     }
     if chases {
-      return FloorProwler(point: point, chases: chases, mood: .flee(0), life: life)
+      return copied(point: point, mood: .flee(0), life: life)
     }
-    return FloorProwler(point: point, chases: chases, mood: .gone, life: life)
+    return copied(point: point, mood: .gone, life: life)
   }
 
   private func retreated(_ age: Int, in maze: Maze, runner: CellPoint) -> FloorProwler {
     let next = age + 1
     if next >= Self.fleeSpan {
-      return FloorProwler(point: point, chases: chases, mood: .gone, life: life)
+      return copied(point: point, mood: .gone, life: life)
     }
     let away = further(in: maze, runner: runner)
-    return FloorProwler(point: away, chases: chases, mood: .flee(next), life: life)
+    return copied(point: away, mood: .flee(next), life: life)
   }
 
   private func further(in maze: Maze, runner: CellPoint) -> CellPoint {

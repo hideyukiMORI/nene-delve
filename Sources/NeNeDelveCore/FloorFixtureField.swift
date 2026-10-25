@@ -129,6 +129,20 @@ public struct FloorFixtureField: Equatable, Sendable {
     return best
   }
 
+  public func nearestBoss(to origin: CellPoint) -> CellPoint? {
+    var best: CellPoint?
+    var bestDistance = 0
+    for step in prowlers {
+      if let distance = bossDistance(step, origin: origin) {
+        if best == nil || distance < bestDistance {
+          best = step.point
+          bestDistance = distance
+        }
+      }
+    }
+    return best
+  }
+
   public func burstMark() -> BurstMark? {
     for fixture in fixtures {
       switch fixture.phase {
@@ -272,6 +286,15 @@ public struct FloorFixtureField: Equatable, Sendable {
     return copied(prowlers: next)
   }
 
+  public func posting(_ point: CellPoint?, depth: Int) -> FloorFixtureField {
+    guard let point else {
+      return self
+    }
+    let boss = FloorProwler(
+      bossAt: point, mood: .blink, life: DelverVitals.bossLife(depth: depth))
+    return copied(prowlers: prowlers + [boss])
+  }
+
   public func beginBurst(at point: CellPoint) -> FloorFixtureField {
     copied(fixtures: fixtures.map { retimed($0, at: point) })
   }
@@ -319,7 +342,29 @@ public struct FloorFixtureField: Equatable, Sendable {
         break
       }
     }
+    if containsBossFight(aged) {
+      return max(hold - 1, 1)
+    }
     return hold - 1
+  }
+
+  private func containsBossFight(_ aged: [FloorProwler]) -> Bool {
+    for step in aged where step.boss {
+      switch step.mood {
+      case .fight:
+        return true
+      case .blink, .flee, .gone:
+        break
+      }
+    }
+    return false
+  }
+
+  private func bossDistance(_ step: FloorProwler, origin: CellPoint) -> Int? {
+    if !step.boss || !blinking(step) {
+      return nil
+    }
+    return abs(step.point.x - origin.x) + abs(step.point.y - origin.y)
   }
 
   private func sealedDistance(_ fixture: FloorFixture, origin: CellPoint) -> Int? {
