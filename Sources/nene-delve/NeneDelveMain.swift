@@ -333,7 +333,7 @@ struct NeneDelveMain {
     switch FloorReducer.tick(world) {
     case .running(let stepped):
       next = stepped
-    case .descended(let onStairs):
+    case .descended(let onStairs), .ascended(let onStairs):
       next = onStairs
     case .stuck:
       return nil
@@ -353,7 +353,7 @@ struct NeneDelveMain {
     switch FloorReducer.tick(world) {
     case .running(let stepped):
       return stepped.walk.explorer.position != origin
-    case .descended(let onStairs):
+    case .descended(let onStairs), .ascended(let onStairs):
       return onStairs.walk.explorer.position != origin
     case .stuck:
       return false
@@ -446,19 +446,22 @@ struct NeneDelveMain {
       return nil
     case .descended(let onStairs):
       present(&terminal, frame: Frame(world: onStairs, along: 0), columns: columns, state: state)
-      return descend(&world, onStairs: onStairs, state: &state)
+      return changed(&world, FloorReducer.nextFloor(onStairs), state: &state)
+    case .ascended(let onStairs):
+      present(&terminal, frame: Frame(world: onStairs, along: 0), columns: columns, state: state)
+      return changed(&world, FloorReducer.previousFloor(onStairs), state: &state)
     case .stuck:
       report(ScreenText.stuck)
       return 1
     }
   }
 
-  private static func descend(_ world: inout FloorWorld, onStairs: FloorWorld, state: inout Loop)
+  private static func changed(_ world: inout FloorWorld, _ next: NextFloor, state: inout Loop)
     -> Int32?
   {
-    switch FloorReducer.nextFloor(onStairs) {
-    case .ready(let next):
-      world = next
+    switch next {
+    case .ready(let rebuilt):
+      world = rebuilt
       state.play.stage = monotonic()
       return nil
     case .stuck:

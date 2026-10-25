@@ -31,6 +31,13 @@ public struct Maze: Equatable, Sendable {
     }
   }
 
+  func withAscent(_ point: CellPoint) -> Maze {
+    var next = tiles
+    next[span.offset(point)] = .stairs
+    let marked = MazeEnds(start: start, stairs: stairs, ascent: point)
+    return Maze(span: span, tiles: next, ends: marked, kind: kind)
+  }
+
   init(span: GridSpan, tiles: [Tile], ends: MazeEnds, kind: MazeKind) {
     self.kind = kind
     self.span = span

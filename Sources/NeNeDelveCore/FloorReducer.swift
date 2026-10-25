@@ -27,6 +27,9 @@ public enum FloorReducer {
     if world.fixtures.hold > 0 {
       return .running(bout(world))
     }
+    if climbing(world, at: world.walk.explorer.position) {
+      return .ascended(world)
+    }
     switch world.aim {
     case .explore:
       return explore(world)
@@ -42,7 +45,20 @@ public enum FloorReducer {
     case .tooSmall:
       return .stuck
     case .maze(let maze):
-      return .ready(descended(world, floor: floor, maze: maze))
+      return .ready(carried(world, floor: floor, maze: maze, moment: .descend))
+    }
+  }
+
+  public static func previousFloor(_ world: FloorWorld) -> NextFloor {
+    guard let floor = world.course.floor.shallower() else {
+      return .stuck
+    }
+    let seed = world.course.launchSeed.forFloor(floor)
+    switch carved(seed: seed, span: world.walk.maze.span) {
+    case .tooSmall:
+      return .stuck
+    case .maze(let maze):
+      return .ready(carried(world, floor: floor, maze: maze, moment: .ascend))
     }
   }
 
@@ -55,15 +71,15 @@ public enum FloorReducer {
 
   private static func explore(_ world: FloorWorld) -> FloorTick {
     var rng = world.walk.rng
-    let lure = world.fixtures.nearestSealed(to: world.walk.explorer.position)
-    let bias = StepBias(lure: lure, avoid: world.fixtures.lakePoints())
+    let bias = StepBias(
+      lure: lure(world), avoid: world.fixtures.lakePoints(), blocked: gate(world))
     switch world.walk.explorer.step(
       world.walk.maze, rng: &rng, avoidStairs: world.fixtures.holdsSealed, bias: bias)
     {
     case .moved(let explorer):
       return moved(world, explorer: explorer, rng: rng, aim: .explore)
     case .arrived(let explorer):
-      return .descended(arrived(world, explorer: explorer, rng: rng))
+      return finish(world, explorer: explorer, rng: rng)
     case .stuck:
       return recover(world)
     }
@@ -74,7 +90,7 @@ public enum FloorReducer {
       return moved(world, explorer: world.walk.explorer, rng: world.walk.rng, aim: .recover)
     }
     let origin = world.walk.explorer.position
-    let target = world.fixtures.nearestSealed(to: origin) ?? world.walk.maze.stairs
+    let target = world.fixtures.nearestSealed(to: origin) ?? destination(world)
     guard let next = FloorRoute.firstStep(world.walk.maze, from: origin, to: target) else {
       return .stuck
     }
@@ -82,7 +98,7 @@ public enum FloorReducer {
     case .moved(let explorer):
       return moved(world, explorer: explorer, rng: world.walk.rng, aim: .recover)
     case .arrived(let explorer):
-      return .descended(arrived(world, explorer: explorer, rng: world.walk.rng))
+      return finish(world, explorer: explorer, rng: world.walk.rng)
     case .stuck:
       return .stuck
     }
@@ -91,6 +107,9 @@ public enum FloorReducer {
   private static func moved(
     _ world: FloorWorld, explorer: Explorer, rng: SplitMix64, aim: WalkAim
   ) -> FloorTick {
+    if climbing(world, at: explorer.position) {
+      return .ascended(arrived(world, explorer: explorer, rng: rng))
+    }
     let delver = DelverMoment.notice(world, explorer: explorer)
     let fixtures = aftermath(world, explorer: explorer)
     let step = Step(
@@ -148,28 +167,79 @@ public enum FloorReducer {
   private static func makeWorld(launchSeed: Seed, floor: FloorIndex, maze: Maze, pace: StepPace)
     -> FloorWorld
   {
+    let marked = stamped(maze, floor: floor)
     let floorSeed = launchSeed.forFloor(floor)
-    let explorer = Explorer.begin(maze)
+    let explorer = Explorer.begin(marked)
     let pin = DelverLine.QuipPin(seed: launchSeed, floor: floor, place: explorer.position)
     let course = FloorCourse(
       launchSeed: launchSeed, floor: floor, pace: pace, delver: Delver.fresh(pin))
-    let walk = FloorWalk(maze: maze, explorer: explorer, rng: SplitMix64(seed: floorSeed), steps: 0)
-    let fixtures = FloorFixtureField.placed(in: maze, seed: floorSeed, depth: floor.depth)
+    let walk = FloorWalk(
+      maze: marked, explorer: explorer, rng: SplitMix64(seed: floorSeed), steps: 0)
+    let fixtures = FloorFixtureField.placed(in: marked, seed: floorSeed, depth: floor.depth)
     return FloorWorld(course: course, walk: walk, fixtures: fixtures, aim: .explore)
   }
 
-  private static func descended(_ world: FloorWorld, floor: FloorIndex, maze: Maze) -> FloorWorld {
+  private static func stamped(_ maze: Maze, floor: FloorIndex) -> Maze {
+    guard let point = AscentSite.point(in: maze, depth: floor.depth) else {
+      return maze
+    }
+    return maze.withAscent(point)
+  }
+
+  private static func carried(
+    _ world: FloorWorld, floor: FloorIndex, maze: Maze, moment: DelverLine.Moment
+  ) -> FloorWorld {
     let born = makeWorld(
       launchSeed: world.course.launchSeed, floor: floor, maze: maze, pace: world.course.pace)
     let pin = DelverLine.QuipPin(
       seed: world.course.launchSeed, floor: floor, place: born.walk.explorer.position)
-    let delver = world.course.delver.carrying(
+    let spoken = world.course.delver.carrying(
       vitals: world.course.delver.vitals.rested(),
-      line: DelverLine.say(.descend, pin: pin, note: floor.depth)
-    ).noted()
+      line: DelverLine.say(moment, pin: pin, note: floor.depth)
+    )
+    let marked = moment == .ascend ? spoken.remembering(world.course.floor.depth) : spoken
     return FloorWorld(
-      course: born.course.with(delver: delver), walk: born.walk, fixtures: born.fixtures,
+      course: born.course.with(delver: marked.noted()), walk: born.walk, fixtures: born.fixtures,
       aim: born.aim)
+  }
+
+  private static func lure(_ world: FloorWorld) -> CellPoint? {
+    if let chest = world.fixtures.nearestSealed(to: world.walk.explorer.position) {
+      return chest
+    }
+    if AscentSite.seeks(world) {
+      return world.walk.maze.ends.ascent
+    }
+    return nil
+  }
+
+  private static func gate(_ world: FloorWorld) -> CellPoint? {
+    if AscentSite.seeks(world) {
+      return world.walk.maze.stairs
+    }
+    return nil
+  }
+
+  private static func destination(_ world: FloorWorld) -> CellPoint {
+    if AscentSite.seeks(world), let up = world.walk.maze.ends.ascent {
+      return up
+    }
+    return world.walk.maze.stairs
+  }
+
+  private static func climbing(_ world: FloorWorld, at place: CellPoint) -> Bool {
+    if !AscentSite.seeks(world) || world.fixtures.holdsSealed {
+      return false
+    }
+    return place == world.walk.maze.ends.ascent
+  }
+
+  private static func finish(_ world: FloorWorld, explorer: Explorer, rng: SplitMix64) -> FloorTick
+  {
+    if explorer.position == world.walk.maze.ends.ascent {
+      return moved(world, explorer: explorer, rng: rng, aim: world.aim)
+    }
+    return .descended(arrived(world, explorer: explorer, rng: rng))
   }
 
   private static func carved(seed: Seed, span: GridSpan) -> MazePlan {

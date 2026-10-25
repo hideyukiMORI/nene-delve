@@ -12,7 +12,7 @@ public struct Explorer: Equatable, Sendable {
   func step(
     _ maze: Maze, rng: inout SplitMix64, avoidStairs: Bool, bias: StepBias
   ) -> ExploreMove {
-    let choices = unvisitedNeighbors(maze, avoidStairs: avoidStairs)
+    let choices = unvisitedNeighbors(maze, avoidStairs: avoidStairs, bias: bias)
     if let next = pick(choices, rng: &rng, bias: bias) {
       return advance(maze, to: next)
     }
@@ -23,10 +23,13 @@ public struct Explorer: Equatable, Sendable {
     advance(maze, to: next)
   }
 
-  private func unvisitedNeighbors(_ maze: Maze, avoidStairs: Bool) -> [CellPoint] {
+  private func unvisitedNeighbors(_ maze: Maze, avoidStairs: Bool, bias: StepBias) -> [CellPoint] {
     var found: [CellPoint] = []
     for direction in Direction.cardinal {
       let next = CellPoint(x: position.x + direction.stepX, y: position.y + direction.stepY)
+      if next == bias.blocked {
+        continue
+      }
       if maze.isOpenUnseen(next, seen: seen) && !blocked(maze, next, avoidStairs: avoidStairs) {
         found.append(next)
       }

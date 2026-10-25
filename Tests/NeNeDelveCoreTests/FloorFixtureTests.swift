@@ -133,7 +133,7 @@ struct FloorFixtureTests {
       case .running(let next):
         #expect(next.walk.explorer.position == origin)
         world = next
-      case .descended, .stuck:
+      case .descended, .ascended, .stuck:
         Issue.record("the fight ended the floor")
         return
       }
@@ -158,7 +158,7 @@ struct FloorFixtureTests {
       switch FloorReducer.tick(world) {
       case .running(let next):
         world = next
-      case .descended, .stuck:
+      case .descended, .ascended, .stuck:
         Issue.record("the fight ended the floor")
         return
       }
@@ -169,7 +169,7 @@ struct FloorFixtureTests {
       switch FloorReducer.tick(world) {
       case .running(let next):
         world = next
-      case .descended, .stuck:
+      case .descended, .ascended, .stuck:
         Issue.record("the flight ended the floor")
         return
       }
@@ -253,6 +253,9 @@ struct FloorFixtureTests {
       case .descended(let next):
         #expect(next.walk.explorer.position == next.walk.maze.stairs)
         #expect(chestsAreOpen(next.fixtures))
+        return
+      case .ascended:
+        Issue.record("the first floor climbed")
         return
       case .stuck:
         Issue.record("chests left the runner stuck")

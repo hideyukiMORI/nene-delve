@@ -179,6 +179,21 @@ struct FramePainterTests {
     GridSpan(width: 80, height: maze.span.height + ScreenText.hudRows)
   }
 
+  @Test func thePlanDrawsTheUpStairApartFromTheDownStair() {
+    let maze = upHall()
+    let grid = FramePainter.paint(
+      world: world(maze), clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    #expect(glyph(grid, point: CellPoint(x: 3, y: 5)) == ScreenText.ascent)
+    #expect(glyph(grid, point: maze.stairs) == ScreenText.stairs)
+  }
+
+  @Test func depthShowsTheUpStairAhead() {
+    let maze = upHall()
+    let grid = FramePainter.paint(
+      world: world(maze), clock: sampleClock(), look: eyed(maze), canvas: canvas(forMaze: maze))
+    #expect(column(grid, at: grid.span.width / 2).contains("<"))
+  }
+
   @Test func depthShowsTheStairsAheadInsteadOfTheMap() {
     let maze = nearHall()
     let grid = FramePainter.paint(
@@ -206,6 +221,19 @@ struct FramePainterTests {
     let shown = picture(grid)
     #expect(shown.contains("$"))
     #expect(shown.contains("&"))
+  }
+
+  private func upHall() -> Maze {
+    let span = GridSpan(width: 15, height: 11)
+    var tiles = Array(repeating: Tile.wall, count: span.count)
+    let start = CellPoint(x: 1, y: 5)
+    let stairs = CellPoint(x: 1, y: 1)
+    tiles[span.offset(start)] = .floor
+    tiles[span.offset(CellPoint(x: 2, y: 5))] = .floor
+    tiles[span.offset(stairs)] = .stairs
+    let maze = Maze(
+      span: span, tiles: tiles, ends: MazeEnds(start: start, stairs: stairs), kind: .filledGrid)
+    return maze.withAscent(CellPoint(x: 3, y: 5))
   }
 
   private func nearHall() -> Maze {

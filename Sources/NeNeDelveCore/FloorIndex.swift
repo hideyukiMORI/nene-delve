@@ -7,4 +7,11 @@ public struct FloorIndex: Equatable, Sendable {
   public func deeper() -> FloorIndex {
     FloorIndex(depth: depth + 1)
   }
+
+  public func shallower() -> FloorIndex? {
+    if depth <= 1 {
+      return nil
+    }
+    return FloorIndex(depth: depth - 1)
+  }
 }
