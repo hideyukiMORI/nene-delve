@@ -15,6 +15,15 @@ public enum FloorReducer {
   }
 
   public static func tick(_ world: FloorWorld) -> FloorTick {
+    switch world.aim {
+    case .drop:
+      return .descended(world)
+    case .explore, .recover:
+      return walk(world)
+    }
+  }
+
+  private static func walk(_ world: FloorWorld) -> FloorTick {
     let world = ShiftWall.turn(world)
     if world.walk.steps > limit(world.walk.maze) {
       return .stuck
@@ -36,6 +45,8 @@ public enum FloorReducer {
       return explore(world)
     case .recover:
       return recover(world)
+    case .drop:
+      return .descended(world)
     }
   }
 
