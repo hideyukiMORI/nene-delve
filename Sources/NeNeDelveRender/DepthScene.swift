@@ -162,8 +162,10 @@ struct DepthScene {
       return
     }
     let tone = DepthTone.face(palette.accent.stairs, vertical: hits[column].vertical)
+    let mark =
+      hits[column].point == world.walk.maze.ends.ascent ? ScreenText.ascent : ScreenText.stairs
     put(
-      Cell(glyph: ScreenText.stairs, foreground: palette.ink.background, background: tone),
+      Cell(glyph: mark, foreground: palette.ink.background, background: tone),
       column: column, row: (plane.top + plane.bottom) / 2, into: &cells)
   }
 

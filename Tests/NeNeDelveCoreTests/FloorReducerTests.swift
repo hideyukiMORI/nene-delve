@@ -43,7 +43,7 @@ struct FloorReducerTests {
           return nil
         }
         return next
-      case .stuck:
+      case .ascended, .stuck:
         return nil
       }
       steps += 1

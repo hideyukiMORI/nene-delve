@@ -27,7 +27,7 @@ public enum WalkLine {
         return nil
       }
       return next
-    case .descended(let stood):
+    case .descended(let stood), .ascended(let stood):
       return stood.walk.explorer.position
     case .stuck:
       return nil

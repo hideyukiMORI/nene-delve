@@ -22,7 +22,7 @@ public enum RoomSpan {
     switch FloorReducer.tick(world) {
     case .running(let stepped):
       return stepped.walk.explorer.position != origin
-    case .descended(let stood):
+    case .descended(let stood), .ascended(let stood):
       return stood.walk.explorer.position != origin
     case .stuck:
       return false

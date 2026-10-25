@@ -12,6 +12,7 @@ public struct DelverLine: Equatable, Sendable {
     case level
     case faint
     case low
+    case ascend
   }
 
   public struct QuipPin: Equatable, Sendable {
@@ -60,6 +61,8 @@ public struct DelverLine: Equatable, Sendable {
         9
       case .low:
         10
+      case .ascend:
+        11
       }
     }
   }
@@ -87,7 +90,7 @@ public struct DelverLine: Equatable, Sendable {
     switch moment {
     case .quiet:
       self
-    case .descend, .chest, .pit, .lake, .engage, .kill, .drove, .level, .faint, .low:
+    case .descend, .ascend, .chest, .pit, .lake, .engage, .kill, .drove, .level, .faint, .low:
       if left <= 1 {
         .quiet
       } else {

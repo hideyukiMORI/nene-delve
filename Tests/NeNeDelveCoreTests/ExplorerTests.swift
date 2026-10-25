@@ -62,7 +62,7 @@ struct ExplorerTests {
       case .running(let next):
         world = next
         positions.append(next.walk.explorer.position)
-      case .descended(let next):
+      case .descended(let next), .ascended(let next):
         world = next
         positions.append(next.walk.explorer.position)
         return positions

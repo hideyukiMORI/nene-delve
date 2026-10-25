@@ -96,9 +96,16 @@ public enum FramePainter {
         return floor(world, point: point)
       case .stairs:
         return Cell(
-          glyph: ScreenText.stairs, foreground: palette.ink.background,
+          glyph: stairMark(world, point), foreground: palette.ink.background,
           background: palette.accent.stairs)
       }
+    }
+
+    func stairMark(_ world: FloorWorld, _ point: CellPoint) -> Character {
+      if point == world.walk.maze.ends.ascent {
+        return ScreenText.ascent
+      }
+      return ScreenText.stairs
     }
 
     func spark(_ world: FloorWorld, _ point: CellPoint) -> Cell? {

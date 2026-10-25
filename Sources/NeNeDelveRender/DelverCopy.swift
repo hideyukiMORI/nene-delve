@@ -32,7 +32,7 @@ enum DelverCopy {
     switch spoken.moment {
     case .quiet, .lake:
       ""
-    case .descend:
+    case .descend, .ascend:
       "B" + String(spoken.note) + "F"
     case .chest, .kill, .drove:
       "EXP+" + String(spoken.note)
@@ -53,6 +53,8 @@ enum DelverCopy {
       ""
     case .descend:
       "IN"
+    case .ascend:
+      "UP"
     case .chest:
       "CHEST $"
     case .pit:
@@ -80,6 +82,8 @@ enum DelverCopy {
       []
     case .descend:
       ["ﾏﾀ ｼﾀｶ", "ｸﾗｲ", "ｲｸﾖ"]
+    case .ascend:
+      ["ﾓﾄﾞﾙ", "ｳｴﾀﾞ", "ﾏﾀ ｳｴ"]
     case .chest:
       ["ﾏﾀ ｶﾈｶ", "ｶﾗｯﾎﾟ", "ﾅﾆﾓﾅｲ"]
     case .pit:

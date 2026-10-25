@@ -22,7 +22,7 @@ public enum StairApproach {
         return nil
       }
       return next
-    case .descended(let stood):
+    case .descended(let stood), .ascended(let stood):
       let next = stood.walk.explorer.position
       if next == origin {
         return nil

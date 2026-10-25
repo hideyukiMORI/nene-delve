@@ -72,7 +72,7 @@ enum FloorRoute {
         parent[offset] = maze.span.offset(current)
         queue.append(next)
       case .stairs:
-        if next == target {
+        if next == target || next == maze.ends.ascent {
           parent[offset] = maze.span.offset(current)
           queue.append(next)
         }

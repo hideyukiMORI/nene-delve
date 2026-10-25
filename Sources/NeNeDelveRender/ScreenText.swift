@@ -13,6 +13,7 @@ public enum ScreenText {
   public static let trail: Character = "."
   public static let runner: Character = "@"
   public static let stairs: Character = ">"
+  public static let ascent: Character = "<"
   public static let chest: Character = "$"
   public static let prowler: Character = "&"
   public static let alarm: Character = "!"
