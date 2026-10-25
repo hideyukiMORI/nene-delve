@@ -26,6 +26,7 @@ public enum FramePainter {
     case .depth:
       var scene = DepthScene(world: shown, palette: palette, canvas: canvas, look: look)
       scene.paint(into: &job.cells)
+      job.stampChart(shown, facing: look.gaze.facing)
     }
     return CellGrid(span: canvas, cells: job.cells)
   }
@@ -347,6 +348,42 @@ public enum FramePainter {
       if canvas.contains(point) {
         cells[canvas.offset(point)] = cell
       }
+    }
+
+    mutating func stampChart(_ world: FloorWorld, facing: Direction) {
+      let viewHeight = canvas.height - ScreenText.hudRows
+      let side = DepthChart.side(fitting: canvas.width, height: viewHeight)
+      if side == 0 {
+        return
+      }
+      let origin = world.walk.explorer.position
+      var row = 0
+      while row < side {
+        var column = 0
+        while column < side {
+          let chart = CellPoint(x: column, y: row)
+          let mazePoint = DepthChart.worldCell(chart, side: side, origin: origin, facing: facing)
+          let screen = CellPoint(x: canvas.width - side + column, y: ScreenText.hudRows + row)
+          put(chartCell(world, point: mazePoint), at: screen)
+          column += 1
+        }
+        row += 1
+      }
+    }
+
+    func chartCell(_ world: FloorWorld, point: CellPoint) -> Cell {
+      if !world.walk.maze.span.contains(point) {
+        return Cell(
+          glyph: ScreenText.joint, foreground: palette.ink.wall,
+          background: palette.ink.background)
+      }
+      let marked = glyph(world, point: point)
+      if marked.glyph != ScreenText.wonder {
+        return marked
+      }
+      return Cell(
+        glyph: wallGlyph(world, point: point), foreground: palette.ink.wall,
+        background: palette.ink.background)
     }
   }
 }

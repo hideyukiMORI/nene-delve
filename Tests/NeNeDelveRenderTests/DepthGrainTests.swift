@@ -15,7 +15,7 @@ struct DepthGrainTests {
     #expect(!frame.contains(",  ,"))
     #expect(!frame.contains(",   ,"))
     #expect(!frame.contains(",    ,"))
-    #expect(!frame.contains(String(ScreenText.dash)))
+    #expect(dashesStayOutsideTheChart(grid))
     #expect(grainInk(grid) == ThemePalette.palette(.neonGrid).ink.wall)
   }
 
@@ -106,6 +106,26 @@ struct DepthGrainTests {
       time: ClockFace(hour: 12, minute: 40, second: 0),
       seed: Seed(raw: 9)
     )
+  }
+
+  private func dashesStayOutsideTheChart(_ grid: CellGrid) -> Bool {
+    let height = grid.span.height - ScreenText.hudRows
+    let side = DepthChart.side(fitting: grid.span.width, height: height)
+    var row = ScreenText.hudRows
+    while row < grid.span.height {
+      var column = 0
+      while column < grid.span.width {
+        let across = column >= grid.span.width - side
+        let down = row < ScreenText.hudRows + side
+        let glyph = grid.cell(column: column, row: row).glyph
+        if glyph == ScreenText.dash && !(across && down) {
+          return false
+        }
+        column += 1
+      }
+      row += 1
+    }
+    return true
   }
 
   private func grains(_ grid: CellGrid) -> Int {
