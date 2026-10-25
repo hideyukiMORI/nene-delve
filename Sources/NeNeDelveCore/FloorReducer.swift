@@ -15,6 +15,7 @@ public enum FloorReducer {
   }
 
   public static func tick(_ world: FloorWorld) -> FloorTick {
+    let world = ShiftWall.turn(world)
     if world.walk.steps > limit(world.walk.maze) {
       return .stuck
     }
