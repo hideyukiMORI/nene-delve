@@ -23,6 +23,24 @@ struct NeneDelveMain {
   private struct Frame {
     let world: FloorWorld
     let along: Double
+    let horizon: Int
+
+    init(world: FloorWorld, along: Double, horizon: Int = 0) {
+      self.world = world
+      self.along = along
+      self.horizon = horizon
+    }
+  }
+
+  private struct Landing {
+    let world: FloorWorld
+    let pitch: DepthPitch
+  }
+
+  private enum Motion {
+    case running(FloorWorld)
+    case stairs(Landing)
+    case stuck
   }
 
   private struct Stage {
@@ -40,6 +58,7 @@ struct NeneDelveMain {
       case decide
       case turn
       case glide
+      case dip
       case step
     }
   }
@@ -156,7 +175,7 @@ struct NeneDelveMain {
 
   private static func park(_ phase: Beat.Phase) -> Beat.Phase {
     switch phase {
-    case .show, .decide, .step:
+    case .show, .decide, .step, .dip:
       phase
     case .turn, .glide:
       .show
@@ -178,6 +197,8 @@ struct NeneDelveMain {
       return turn(&terminal, stage: stage, state: &state, beat: &beat)
     case .glide:
       return glide(&terminal, stage: stage, state: &state, beat: &beat)
+    case .dip:
+      return dip(&terminal, stage: stage, state: &state, beat: &beat)
     case .step:
       return advance(&terminal, stage: stage, state: &state, beat: &beat)
     }
@@ -226,6 +247,11 @@ struct NeneDelveMain {
       beat.phase = .glide
       return nil
     }
+    if state.view == .depth, case .stairs = motion(current) {
+      beat.slice = 0
+      beat.phase = .dip
+      return nil
+    }
     beat.phase = .step
     return nil
   }
@@ -266,7 +292,8 @@ struct NeneDelveMain {
         &terminal, frame: Frame(world: current, along: along), columns: stage.columns, state: state)
       beat.hold = glideHold(current)
       if beat.slice + 1 >= DepthHold.slices {
-        beat.phase = .step
+        beat.slice = 0
+        beat.phase = afterGlide(current)
         return nil
       }
       beat.slice += 1
@@ -427,7 +454,8 @@ struct NeneDelveMain {
     let canvas = GridSpan(
       width: columns, height: frame.world.walk.maze.span.height + ScreenText.hudRows)
     let gaze = Gaze(
-      facing: state.facing, place: frame.world.walk.explorer.position, along: frame.along)
+      facing: state.facing, place: frame.world.walk.explorer.position, along: frame.along,
+      horizon: frame.horizon)
     let grid = FramePainter.paint(
       world: frame.world,
       clock: hud(state: state),
@@ -437,23 +465,127 @@ struct NeneDelveMain {
     terminal.present(grid)
   }
 
+  private static func dip(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
+  ) -> Int32? {
+    switch ready(&terminal, stage: stage, state: &state) {
+    case .skip:
+      beat.hold = wait(state)
+      return nil
+    case .stop:
+      return 1
+    case .world:
+      return pitched(&terminal, stage: stage, state: &state, beat: &beat)
+    }
+  }
+
+  private static func pitched(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
+  ) -> Int32? {
+    guard let current = state.world, case .stairs = motion(current) else {
+      beat.phase = .show
+      beat.hold = 0
+      beat.slice = 0
+      return nil
+    }
+    if state.view != .depth {
+      beat.slice = 0
+      return advance(&terminal, stage: stage, state: &state, beat: &beat)
+    }
+    return tilt(&terminal, stage: stage, state: &state, beat: &beat)
+  }
+
+  private static func tilt(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
+  ) -> Int32? {
+    guard let current = state.world, case .stairs(let landing) = motion(current) else {
+      beat.phase = .show
+      beat.hold = 0
+      beat.slice = 0
+      return nil
+    }
+    if beat.slice >= DepthHold.slices {
+      return cut(&terminal, stage: stage, state: &state, beat: &beat)
+    }
+    let frame = Frame(
+      world: landing.world, along: 0, horizon: landing.pitch.horizon(frame: beat.slice))
+    present(&terminal, frame: frame, columns: stage.columns, state: state)
+    beat.hold = DepthHold.slice
+    beat.slice += 1
+    return nil
+  }
+
+  private static func cut(
+    _ terminal: inout TerminalSession, stage: Stage, state: inout Loop, beat: inout Beat
+  ) -> Int32? {
+    guard var current = state.world else {
+      return 1
+    }
+    let depth = current.course.floor.depth
+    let seen = current
+    let code = swap(&current, state: &state)
+    state.world = current
+    retarget(&state, before: seen)
+    beat.slice = 0
+    beat.phase = .show
+    beat.hold = landed(code, depth: depth, state: state)
+    guard code == nil, let shown = state.world, shown.course.floor.depth != depth else {
+      return code
+    }
+    present(&terminal, frame: Frame(world: shown, along: 0), columns: stage.columns, state: state)
+    return nil
+  }
+
   private static func step(
     _ terminal: inout TerminalSession, columns: Int, world: inout FloorWorld, state: inout Loop
   ) -> Int32? {
-    switch FloorReducer.tick(world) {
+    if case .stairs(let landing) = motion(world) {
+      present(
+        &terminal, frame: Frame(world: landing.world, along: 0), columns: columns, state: state)
+    }
+    return swap(&world, state: &state)
+  }
+
+  private static func swap(_ world: inout FloorWorld, state: inout Loop) -> Int32? {
+    switch motion(world) {
     case .running(let next):
       world = next
       return nil
-    case .descended(let onStairs):
-      present(&terminal, frame: Frame(world: onStairs, along: 0), columns: columns, state: state)
-      return changed(&world, FloorReducer.nextFloor(onStairs), state: &state)
-    case .ascended(let onStairs):
-      present(&terminal, frame: Frame(world: onStairs, along: 0), columns: columns, state: state)
-      return changed(&world, FloorReducer.previousFloor(onStairs), state: &state)
+    case .stairs(let landing):
+      return changed(&world, beyond(landing), state: &state)
     case .stuck:
       report(ScreenText.stuck)
       return 1
     }
+  }
+
+  private static func beyond(_ landing: Landing) -> NextFloor {
+    switch landing.pitch {
+    case .descend:
+      FloorReducer.nextFloor(landing.world)
+    case .ascend:
+      FloorReducer.previousFloor(landing.world)
+    }
+  }
+
+  private static func motion(_ world: FloorWorld) -> Motion {
+    switch FloorReducer.tick(world) {
+    case .running(let next):
+      .running(next)
+    case .descended(let stood):
+      .stairs(Landing(world: stood, pitch: .descend))
+    case .ascended(let stood):
+      .stairs(Landing(world: stood, pitch: .ascend))
+    case .stuck:
+      .stuck
+    }
+  }
+
+  private static func afterGlide(_ world: FloorWorld) -> Beat.Phase {
+    if case .stairs = motion(world) {
+      return .dip
+    }
+    return .step
   }
 
   private static func changed(_ world: inout FloorWorld, _ next: NextFloor, state: inout Loop)

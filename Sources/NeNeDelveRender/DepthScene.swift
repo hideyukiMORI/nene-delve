@@ -60,7 +60,7 @@ struct DepthScene {
   private func draw(_ hit: DepthHit, column: Int, viewHeight: Int, into cells: inout [Cell])
     -> Double
   {
-    let plane = DepthPlane.across(hit.distance, viewHeight: viewHeight)
+    let plane = band(hit.distance, viewHeight: viewHeight)
     var row = 0
     while row < viewHeight {
       let band = Slice(hit: hit, row: row, top: plane.top, bottom: plane.bottom)
@@ -138,7 +138,7 @@ struct DepthScene {
   }
 
   private func bar(_ hit: DepthHit, column: Int, viewHeight: Int, into cells: inout [Cell]) {
-    let plane = DepthPlane.across(hit.distance, viewHeight: viewHeight)
+    let plane = band(hit.distance, viewHeight: viewHeight)
     var row = plane.top + 1
     while row < plane.bottom {
       put(post(hit), column: column, row: row, into: &cells)
@@ -157,7 +157,7 @@ struct DepthScene {
     guard let column = stairColumn(hits) else {
       return
     }
-    let plane = DepthPlane.across(hits[column].distance, viewHeight: height)
+    let plane = band(hits[column].distance, viewHeight: height)
     if plane.bottom < plane.top {
       return
     }
@@ -173,7 +173,7 @@ struct DepthScene {
     guard let cap = DeadEnd.cap(world), let column = capColumn(hits, cap) else {
       return
     }
-    let plane = DepthPlane.across(hits[column].distance, viewHeight: height)
+    let plane = band(hits[column].distance, viewHeight: height)
     if plane.bottom < plane.top {
       return
     }
@@ -219,8 +219,13 @@ struct DepthScene {
     return chosen
   }
 
+  private func band(_ distance: Double, viewHeight: Int) -> DepthPlane {
+    DepthPlane.across(distance, viewHeight: viewHeight, horizon: gaze.horizon)
+  }
+
   private func sample(column: Int, row: Int, viewHeight: Int) -> CellPoint? {
-    let horizon = Double(viewHeight) / 2
+    let split = Double(viewHeight) / 2 - Double(gaze.horizon)
+    let horizon = min(max(split, 0), Double(viewHeight))
     let below = Double(row) - horizon
     if below <= 0 {
       return nil
@@ -337,8 +342,9 @@ struct DepthScene {
     if stamp.cast.distance >= distances[stamp.column] {
       return
     }
-    let top = max(0, (stamp.viewHeight - stamp.cast.size) / 2)
-    let bottom = min(stamp.viewHeight - 1, top + stamp.cast.size - 1)
+    let raised = (stamp.viewHeight - stamp.cast.size) / 2 - gaze.horizon
+    let top = min(max(raised, 0), stamp.viewHeight)
+    let bottom = min(max(raised + stamp.cast.size - 1, -1), stamp.viewHeight - 1)
     var row = top
     while row <= bottom {
       let behind = existing(column: stamp.column, row: row, in: cells)
