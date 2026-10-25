@@ -3,6 +3,7 @@ public enum Keystroke: Equatable, Sendable {
   case nextTheme
   case previousTheme
   case toggleView
+  case drop
   case none
 
   public static func decoded(_ byte: UInt8) -> Keystroke {
@@ -17,6 +18,9 @@ public enum Keystroke: Equatable, Sendable {
     }
     if byte == UInt8(ascii: "v") || byte == UInt8(ascii: "V") {
       return .toggleView
+    }
+    if byte == UInt8(ascii: "n") || byte == UInt8(ascii: "N") {
+      return .drop
     }
     return .none
   }

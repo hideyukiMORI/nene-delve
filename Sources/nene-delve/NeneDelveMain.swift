@@ -124,7 +124,7 @@ struct NeneDelveMain {
     var state = Loop(world: nil, play: play, view: .plan, facing: .north)
     var beat = Beat(phase: .dig, slice: 0, hold: 0, seal: false)
     while true {
-      if !steer(terminal.pollKey(), state: &state) {
+      if !steer(terminal.pollKey(), state: &state, beat: &beat) {
         return 0
       }
       if state.view == .plan {
@@ -137,7 +137,7 @@ struct NeneDelveMain {
     }
   }
 
-  private static func steer(_ key: Keystroke, state: inout Loop) -> Bool {
+  private static func steer(_ key: Keystroke, state: inout Loop, beat: inout Beat) -> Bool {
     switch key {
     case .quit:
       return false
@@ -150,9 +150,23 @@ struct NeneDelveMain {
     case .toggleView:
       state.view = state.view.toggled()
       return true
+    case .drop:
+      drop(&state, beat: &beat)
+      return true
     case .none:
       return true
     }
+  }
+
+  private static func drop(_ state: inout Loop, beat: inout Beat) {
+    guard let world = state.world else {
+      return
+    }
+    state.world = FloorWorld(
+      course: world.course, walk: world.walk, fixtures: world.fixtures, aim: .drop)
+    beat.phase = .decide
+    beat.slice = 0
+    beat.hold = 0
   }
 
   private static func frame(

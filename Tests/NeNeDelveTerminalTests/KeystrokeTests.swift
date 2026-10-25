@@ -12,4 +12,9 @@ struct KeystrokeTests {
     #expect(Keystroke.decoded(UInt8(ascii: "V")) == .toggleView)
     #expect(Keystroke.decoded(UInt8(ascii: "x")) == .none)
   }
+
+  @Test func nDropsToTheNextFloor() {
+    #expect(Keystroke.decoded(UInt8(ascii: "n")) == .drop)
+    #expect(Keystroke.decoded(UInt8(ascii: "N")) == .drop)
+  }
 }
