@@ -299,7 +299,7 @@ public enum FramePainter {
         return nil
       }
       return Cell(
-        glyph: beastGlyph(beast, steps: world.walk.steps),
+        glyph: ScreenText.foeGlyph(beast, steps: world.walk.steps),
         foreground: palette.accent.mark.threat, background: standing(world, point))
     }
 
@@ -326,16 +326,6 @@ public enum FramePainter {
         age
       case .blink, .flee, .gone:
         nil
-      }
-    }
-
-    func beastGlyph(_ beast: FloorProwler, steps: Int) -> Character {
-      let body = beast.boss ? ScreenText.boss : ScreenText.prowler
-      switch beast.mood {
-      case .blink:
-        return steps.isMultiple(of: 2) ? body : ScreenText.alarm
-      case .fight, .flee, .gone:
-        return body
       }
     }
 

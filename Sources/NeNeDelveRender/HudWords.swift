@@ -17,7 +17,7 @@ enum HudWords {
       return 0
     }
     return switch line.moment {
-    case .pit, .engage:
+    case .pit, .engage, .mimic:
       line.note
     case .quiet, .descend, .ascend, .chest, .lake, .kill, .drove, .level, .faint, .low, .warp:
       0
@@ -81,7 +81,7 @@ enum HudWords {
 
   private static func alarm(_ moment: DelverLine.Moment) -> HudRole {
     switch moment {
-    case .pit, .engage, .faint, .low:
+    case .pit, .engage, .faint, .low, .mimic:
       .alarm
     case .quiet, .descend, .ascend, .chest, .lake, .kill, .drove, .level, .warp:
       .value

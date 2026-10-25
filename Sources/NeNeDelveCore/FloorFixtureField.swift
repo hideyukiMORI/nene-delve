@@ -37,8 +37,9 @@ public struct FloorFixtureField: Equatable, Sendable {
     let beasts = lurking(spots, taken: taken, rng: water.rng, depth: depth)
     let traps = pits(spots, taken: taken + beasts.used, rng: beasts.rng)
     let pads = warps(spots, taken: taken + beasts.used + traps.used, rng: traps.rng)
+    let marked = ChestMimic.disguise(chests.fixtures, rng: pads.rng)
     return FloorFixtureField(
-      fixtures: chests.fixtures + water.fixtures + traps.fixtures + pads.fixtures, wade: 0,
+      fixtures: marked + water.fixtures + traps.fixtures + pads.fixtures, wade: 0,
       prowlers: beasts.prowlers
     )
   }
@@ -46,6 +47,18 @@ public struct FloorFixtureField: Equatable, Sendable {
   public var holdsSealed: Bool {
     for fixture in fixtures where blocksStairs(fixture) {
       return true
+    }
+    return false
+  }
+
+  func mimic(at point: CellPoint) -> Bool {
+    for fixture in fixtures where fixture.point == point {
+      switch fixture.kind {
+      case .chest:
+        return sealedMimic(fixture)
+      case .lake, .pit, .warp:
+        return false
+      }
     }
     return false
   }
@@ -295,6 +308,15 @@ public struct FloorFixtureField: Equatable, Sendable {
     return copied(prowlers: prowlers + [boss])
   }
 
+  func bitten(at point: CellPoint, depth: Int, in maze: Maze) -> FloorFixtureField {
+    let spot = ChestMimic.stand(at: point, in: maze, prowlers: prowlers)
+    let foe = FloorProwler(
+      mimicAt: spot, mood: .fight(0), life: DelverVitals.foeLife(depth: depth, chases: false))
+    return copied(
+      fixtures: fixtures.map { openedMimic($0, at: point) }, hold: FloorProwler.fightSpan,
+      prowlers: prowlers + [foe])
+  }
+
   public func beginBurst(at point: CellPoint) -> FloorFixtureField {
     copied(fixtures: fixtures.map { retimed($0, at: point) })
   }
@@ -313,6 +335,30 @@ public struct FloorFixtureField: Equatable, Sendable {
       hold: hold ?? self.hold,
       prowlers: prowlers ?? self.prowlers
     )
+  }
+
+  private func sealedMimic(_ fixture: FloorFixture) -> Bool {
+    if !fixture.mimic {
+      return false
+    }
+    switch fixture.phase {
+    case .sealed:
+      return true
+    case .bursting, .open:
+      return false
+    }
+  }
+
+  private func openedMimic(_ fixture: FloorFixture, at point: CellPoint) -> FloorFixture {
+    if fixture.point != point || !fixture.mimic {
+      return fixture
+    }
+    switch fixture.kind {
+    case .chest:
+      return FloorFixture(point: fixture.point, kind: .chest, phase: .open, mimic: true)
+    case .lake, .pit, .warp:
+      return fixture
+    }
   }
 
   private func blinking(_ step: FloorProwler) -> Bool {
@@ -420,7 +466,7 @@ public struct FloorFixtureField: Equatable, Sendable {
     switch fixture.kind {
     case .warp:
       if fixture.point == origin || fixture.point == exit {
-        return FloorFixture(point: fixture.point, kind: .warp, phase: .open)
+        return FloorFixture(point: fixture.point, kind: .warp, phase: .open, mimic: fixture.mimic)
       }
       return fixture
     case .chest, .lake, .pit:
@@ -434,7 +480,8 @@ public struct FloorFixtureField: Equatable, Sendable {
     }
     switch fixture.phase {
     case .sealed:
-      return FloorFixture(point: fixture.point, kind: fixture.kind, phase: .bursting(0))
+      return FloorFixture(
+        point: fixture.point, kind: fixture.kind, phase: .bursting(0), mimic: fixture.mimic)
     case .bursting, .open:
       return fixture
     }
@@ -446,7 +493,8 @@ public struct FloorFixtureField: Equatable, Sendable {
     }
     switch fixture.kind {
     case .pit:
-      return FloorFixture(point: fixture.point, kind: fixture.kind, phase: .open)
+      return FloorFixture(
+        point: fixture.point, kind: fixture.kind, phase: .open, mimic: fixture.mimic)
     case .chest, .lake, .warp:
       return fixture
     }
@@ -457,9 +505,11 @@ public struct FloorFixtureField: Equatable, Sendable {
     case .bursting(let age):
       let next = age + 1
       if next >= FloorFixture.burstSpan {
-        return FloorFixture(point: fixture.point, kind: fixture.kind, phase: .open)
+        return FloorFixture(
+          point: fixture.point, kind: fixture.kind, phase: .open, mimic: fixture.mimic)
       }
-      return FloorFixture(point: fixture.point, kind: fixture.kind, phase: .bursting(next))
+      return FloorFixture(
+        point: fixture.point, kind: fixture.kind, phase: .bursting(next), mimic: fixture.mimic)
     case .sealed, .open:
       return fixture
     }

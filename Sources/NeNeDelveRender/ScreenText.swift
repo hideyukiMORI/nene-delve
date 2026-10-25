@@ -15,12 +15,24 @@ public enum ScreenText {
   public static let stairs: Character = ">"
   public static let ascent: Character = "<"
   public static let chest: Character = "$"
+  public static let mimic: Character = "$"
   public static let prowler: Character = "&"
   public static let boss: Character = "B"
   public static let alarm: Character = "!"
   public static let pit: Character = "^"
   public static let wonder: Character = "?"
   public static let warp: Character = "o"
+
+  public static func foeGlyph(_ beast: FloorProwler, steps: Int) -> Character {
+    let flashing = blinks(beast, steps: steps)
+    if beast.boss {
+      return flashing ? alarm : boss
+    }
+    if beast.mimic {
+      return flashing ? prowler : mimic
+    }
+    return flashing ? alarm : prowler
+  }
 
   public static func spark(_ age: Int) -> Character {
     let marks = Array("*%~^")
@@ -50,6 +62,18 @@ public enum ScreenText {
     let marks = Array("o0#%")
     let index = phase % marks.count
     return marks[index]
+  }
+
+  private static func blinks(_ beast: FloorProwler, steps: Int) -> Bool {
+    let odd = !steps.isMultiple(of: 2)
+    switch beast.mood {
+    case .blink:
+      return odd
+    case .fight, .flee:
+      return beast.mimic && odd
+    case .gone:
+      return false
+    }
   }
 
   public static func rejection(_ reason: LaunchRejection) -> String {

@@ -243,6 +243,62 @@ struct FramePainterTests {
     #expect(glyph(battle, point: spot) == ScreenText.boss)
   }
 
+  @Test func thePlanDrawsASealedMimicAsLoot() {
+    let maze = rectangle()
+    let chest = CellPoint(x: 4, y: 4)
+    let fixture = FloorFixture(point: chest, kind: .chest, phase: .sealed, mimic: true)
+    let base = world(maze)
+    let disguised = FloorWorld(
+      course: base.course, walk: base.walk,
+      fixtures: FloorFixtureField(fixtures: [fixture], wade: 0), aim: base.aim)
+    let grid = FramePainter.paint(
+      world: disguised, clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    let painted = cell(grid, point: chest)
+    #expect(painted.glyph == ScreenText.chest)
+    #expect(painted.foreground == ThemePalette.palette(.neonGrid).accent.mark.loot)
+  }
+
+  @Test func thePlanDrawsAFightingMimicInThreatColor() {
+    let maze = rectangle()
+    let spot = CellPoint(x: 4, y: 4)
+    let fighting = FloorProwler(mimicAt: spot, mood: .fight(0), life: 16)
+    let quiet = FramePainter.paint(
+      world: haunted(maze, beast: fighting, steps: 0),
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    let body = cell(quiet, point: spot)
+    #expect(body.glyph == ScreenText.mimic)
+    #expect(body.foreground == ThemePalette.palette(.neonGrid).accent.mark.threat)
+    let flash = FramePainter.paint(
+      world: haunted(maze, beast: fighting, steps: 1),
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    #expect(glyph(flash, point: spot) == ScreenText.prowler)
+  }
+
+  @Test func depthShowsAFightingMimicAsAChestThenAProwler() {
+    let maze = hall()
+    let beast = FloorProwler(mimicAt: CellPoint(x: 6, y: 5), mood: .fight(0), life: 16)
+    let even = FramePainter.paint(
+      world: haunted(maze, beast: beast, steps: 0),
+      clock: sampleClock(), look: eyed(maze), canvas: canvas(forMaze: maze))
+    #expect(picture(even).contains("$"))
+    #expect(!picture(even).contains("&"))
+    let odd = FramePainter.paint(
+      world: haunted(maze, beast: beast, steps: 1),
+      clock: sampleClock(), look: eyed(maze), canvas: canvas(forMaze: maze))
+    #expect(picture(odd).contains("&"))
+  }
+
+  @Test func aMimicLineNamesTheChest() {
+    let pin = DelverLine.QuipPin(seed: Seed(raw: 9), floor: .first, place: CellPoint(x: 2, y: 1))
+    let bitten = DelverCopy.line(DelverLine.say(.mimic, pin: pin, note: 0))
+    #expect(bitten.contains("MIMIC $"))
+    #expect(!bitten.contains("HP-"))
+    #expect(!bitten.contains("ENGAGE"))
+    let hurt = DelverCopy.line(DelverLine.say(.mimic, pin: pin, note: 1))
+    #expect(hurt.contains("MIMIC $"))
+    #expect(hurt.contains("HP-1"))
+  }
+
   @Test func depthShowsABossAsB() {
     let maze = hall()
     let beast = FloorProwler(bossAt: CellPoint(x: 6, y: 5), mood: .blink, life: 40)
