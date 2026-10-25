@@ -213,11 +213,9 @@ struct FramePainterTests {
     let shown = column(grid, at: grid.span.width / 2)
     let frame = picture(grid)
     #expect(shown.contains(">"))
-    #expect(!frame.contains("-"))
     #expect(!frame.contains("#"))
     #expect(!frame.contains("%"))
-    #expect(!frame.contains("@"))
-    #expect(!frame.contains("+"))
+    #expect(mapMarksStayInTheChart(grid))
   }
 
   @Test func depthShowsAChestAndAProwlerAhead() {
@@ -448,6 +446,30 @@ struct FramePainterTests {
       course: base.course, walk: base.walk,
       fixtures: FloorFixtureField(fixtures: base.fixtures.fixtures, wade: 0, prowlers: [beast]),
       aim: base.aim)
+  }
+
+  private func mapMarksStayInTheChart(_ grid: CellGrid) -> Bool {
+    let height = grid.span.height - ScreenText.hudRows
+    let side = DepthChart.side(fitting: grid.span.width, height: height)
+    var row = ScreenText.hudRows
+    while row < grid.span.height {
+      var column = 0
+      while column < grid.span.width {
+        let glyph = grid.cell(column: column, row: row).glyph
+        let across = column >= grid.span.width - side
+        let down = row < ScreenText.hudRows + side
+        if mapMark(glyph) && !(across && down) {
+          return false
+        }
+        column += 1
+      }
+      row += 1
+    }
+    return true
+  }
+
+  private func mapMark(_ glyph: Character) -> Bool {
+    glyph == ScreenText.dash || glyph == ScreenText.runner || glyph == ScreenText.joint
   }
 
   private func column(_ grid: CellGrid, at column: Int) -> String {
