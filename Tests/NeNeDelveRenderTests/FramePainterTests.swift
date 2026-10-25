@@ -223,6 +223,86 @@ struct FramePainterTests {
     #expect(shown.contains("&"))
   }
 
+  @Test func aSealedWarpBlinksOnThePlan() {
+    let maze = rectangle()
+    let pad = CellPoint(x: 4, y: 4)
+    let grid = FramePainter.paint(
+      world: furnished(maze, chest: pad, phase: .sealed, kind: .warp),
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    let painted = cell(grid, point: pad)
+    #expect(painted.glyph == ScreenText.via(pad.x + pad.y))
+    #expect(painted.foreground == ThemePalette.palette(.neonGrid).accent.hud)
+    #expect(painted.background == ThemePalette.palette(.neonGrid).ink.background)
+  }
+
+  @Test func anOpenWarpLeavesTheFloorBlank() {
+    let maze = rectangle()
+    let pad = CellPoint(x: 4, y: 4)
+    let grid = FramePainter.paint(
+      world: furnished(maze, chest: pad, phase: .open, kind: .warp),
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    #expect(glyph(grid, point: pad) == ScreenText.floor)
+  }
+
+  @Test func depthShowsAWarpAhead() {
+    let maze = hall()
+    let pad = CellPoint(x: 4, y: 5)
+    let grid = FramePainter.paint(
+      world: furnished(maze, chest: pad, phase: .sealed, kind: .warp),
+      clock: sampleClock(), look: eyed(maze), canvas: canvas(forMaze: maze))
+    #expect(picture(grid).contains(String(ScreenText.via(pad.x + pad.y))))
+  }
+
+  @Test func aWarpPauseGlitchesTheOpenNeighbors() {
+    let maze = hall()
+    let runner = CellPoint(x: 3, y: 5)
+    let grid = FramePainter.paint(
+      world: pausedWarp(maze, at: runner, wade: FloorFixture.warpSpan, steps: 2),
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    let west = CellPoint(x: 2, y: 5)
+    let east = CellPoint(x: 4, y: 5)
+    #expect(glyph(grid, point: runner) == ScreenText.runner)
+    #expect(glyph(grid, point: west) == ScreenText.glitch(2 + west.x + west.y))
+    #expect(glyph(grid, point: east) == ScreenText.glitch(2 + east.x + east.y))
+    #expect(cell(grid, point: east).foreground == ThemePalette.palette(.neonGrid).accent.hud)
+    #expect(cell(grid, point: east).background == ThemePalette.palette(.neonGrid).ink.background)
+    let shown = (0..<ScreenText.hudRows).map { line(grid, row: $0) }.joined()
+    #expect(shown.contains("VIA o"))
+    #expect(shown.contains("ｽﾞﾚﾀ"))
+  }
+
+  @Test func aChestSparkCoversTheWarpGlitch() {
+    let maze = rectangle()
+    let runner = CellPoint(x: 4, y: 4)
+    let chest = CellPoint(x: 5, y: 3)
+    let shared = CellPoint(x: 4, y: 3)
+    let base = pausedWarp(maze, at: runner, wade: FloorFixture.warpSpan, steps: 1)
+    let bursting = FloorFixture(point: chest, kind: .chest, phase: .bursting(1))
+    let world = FloorWorld(
+      course: base.course, walk: base.walk,
+      fixtures: FloorFixtureField(fixtures: [bursting], wade: base.fixtures.wade),
+      aim: base.aim)
+    let grid = FramePainter.paint(
+      world: world, clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    #expect(glyph(grid, point: shared) == ScreenText.spark(1))
+    #expect(glyph(grid, point: CellPoint(x: 3, y: 4)) == ScreenText.glitch(1 + 3 + 4))
+  }
+
+  private func pausedWarp(_ maze: Maze, at place: CellPoint, wade: Int, steps: Int) -> FloorWorld {
+    let base = world(maze)
+    var seen = base.walk.explorer.seen
+    seen[maze.span.offset(place)] = true
+    let explorer = Explorer(position: place, path: [maze.start, place], seen: seen)
+    let walk = FloorWalk(maze: maze, explorer: explorer, rng: base.walk.rng, steps: steps)
+    let line = DelverLine(moment: .warp, voice: 0, note: 0, left: DelverLine.span)
+    let course = FloorCourse(
+      launchSeed: Seed(raw: 1), floor: .first, pace: .explore,
+      delver: Delver(vitals: .fresh(), line: line))
+    return FloorWorld(
+      course: course, walk: walk, fixtures: FloorFixtureField(fixtures: [], wade: wade),
+      aim: .explore)
+  }
+
   private func upHall() -> Maze {
     let span = GridSpan(width: 15, height: 11)
     var tiles = Array(repeating: Tile.wall, count: span.count)

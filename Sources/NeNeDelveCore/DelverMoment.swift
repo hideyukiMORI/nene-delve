@@ -41,6 +41,11 @@ enum DelverMoment {
     return world.course.delver.carrying(vitals: hurt, line: line)
   }
 
+  static func glitch(_ world: FloorWorld, place: CellPoint) -> Delver {
+    let line = DelverLine.say(.warp, pin: pin(world, place: place), note: 0)
+    return world.course.delver.carrying(vitals: world.course.delver.vitals, line: line)
+  }
+
   private static func wet(_ world: FloorWorld, place: CellPoint) -> Delver {
     let line = DelverLine.say(.lake, pin: pin(world, place: place), note: 0)
     return world.course.delver.carrying(vitals: world.course.delver.vitals, line: line)

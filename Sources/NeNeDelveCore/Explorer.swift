@@ -23,6 +23,15 @@ public struct Explorer: Equatable, Sendable {
     advance(maze, to: next)
   }
 
+  /// 階段の到着にはしない。着地は床のパッドである。
+  func jump(to next: CellPoint, maze: Maze) -> Explorer {
+    var updated = seen
+    if maze.span.contains(next) {
+      updated[maze.span.offset(next)] = true
+    }
+    return Explorer(position: next, path: path + [next], seen: updated)
+  }
+
   private func unvisitedNeighbors(_ maze: Maze, avoidStairs: Bool, bias: StepBias) -> [CellPoint] {
     var found: [CellPoint] = []
     for direction in Direction.cardinal {

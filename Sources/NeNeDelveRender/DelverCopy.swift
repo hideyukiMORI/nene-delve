@@ -30,7 +30,7 @@ enum DelverCopy {
 
   private static func note(_ spoken: DelverLine) -> String {
     switch spoken.moment {
-    case .quiet, .lake:
+    case .quiet, .lake, .warp:
       ""
     case .descend, .ascend:
       "B" + String(spoken.note) + "F"
@@ -73,6 +73,8 @@ enum DelverCopy {
       "REBOOT"
     case .low:
       "HP LOW"
+    case .warp:
+      "VIA o"
     }
   }
 
@@ -102,6 +104,8 @@ enum DelverCopy {
       ["ﾁｮｯﾄｼﾝﾀﾞ", "ﾏﾀﾅ", "ｳﾜｰ"]
     case .low:
       ["ﾔﾊﾞｲ", "ｲﾀｲ", "ﾑﾘ"]
+    case .warp:
+      ["ｽﾞﾚﾀ", "ﾅﾆｺﾚ", "ﾋﾞｶｯ"]
     }
   }
 }
