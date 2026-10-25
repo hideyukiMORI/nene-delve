@@ -2,7 +2,15 @@ public struct Maze: Equatable, Sendable {
   public let kind: MazeKind
   public let span: GridSpan
   public let tiles: [Tile]
-  public let ends: MazeEnds
+  private let plate: MazePlate
+
+  public var ends: MazeEnds {
+    plate.ends
+  }
+
+  public var dug: [CellPoint] {
+    plate.dug
+  }
 
   public var start: CellPoint {
     ends.start
@@ -35,13 +43,18 @@ public struct Maze: Equatable, Sendable {
     var next = tiles
     next[span.offset(point)] = .stairs
     let marked = MazeEnds(start: start, stairs: stairs, ascent: point)
-    return Maze(span: span, tiles: next, ends: marked, kind: kind)
+    let kept = MazePlate(ends: marked, dug: dug)
+    return Maze(span: span, tiles: next, plate: kept, kind: kind)
   }
 
   init(span: GridSpan, tiles: [Tile], ends: MazeEnds, kind: MazeKind) {
+    self.init(span: span, tiles: tiles, plate: MazePlate(ends: ends), kind: kind)
+  }
+
+  init(span: GridSpan, tiles: [Tile], plate: MazePlate, kind: MazeKind) {
     self.kind = kind
     self.span = span
     self.tiles = tiles
-    self.ends = ends
+    self.plate = plate
   }
 }

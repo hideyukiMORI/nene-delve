@@ -1,6 +1,7 @@
 struct RoomMaze {
   private var tiles: [Tile]
   private var rooms: [RoomBox]
+  private var dug: [CellPoint]
   private var rng: SplitMix64
   private let span: GridSpan
 
@@ -8,6 +9,7 @@ struct RoomMaze {
     self.span = span
     tiles = Array(repeating: .wall, count: span.count)
     rooms = []
+    dug = []
     rng = SplitMix64(seed: seed)
   }
 
@@ -24,7 +26,8 @@ struct RoomMaze {
     let stairs = stairPoint()
     finished[span.offset(stairs)] = .stairs
     let ends = MazeEnds(start: rooms[0].center, stairs: stairs)
-    return Maze(span: span, tiles: finished, ends: ends, kind: .rooms)
+    let plate = MazePlate(ends: ends, dug: dug)
+    return Maze(span: span, tiles: finished, plate: plate, kind: .rooms)
   }
 
   private mutating func placeRooms() {
@@ -148,7 +151,12 @@ struct RoomMaze {
     if point.x <= 0 || point.y <= 0 || point.x >= span.width - 1 || point.y >= span.height - 1 {
       return
     }
-    tiles[span.offset(point)] = .floor
+    let offset = span.offset(point)
+    if tiles[offset] == .floor {
+      return
+    }
+    tiles[offset] = .floor
+    dug.append(point)
   }
 
   private mutating func roll() -> UInt64 {

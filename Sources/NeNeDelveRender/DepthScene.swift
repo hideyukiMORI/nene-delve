@@ -4,7 +4,7 @@ struct DepthScene {
   let world: FloorWorld
   let palette: ThemePalette
   let canvas: GridSpan
-  let gaze: Gaze
+  let look: FrameLook
 
   mutating func paint(into cells: inout [Cell]) {
     let height = canvas.height - ScreenText.hudRows
@@ -12,7 +12,7 @@ struct DepthScene {
       return
     }
     let cast = DepthCaster.Cast(
-      maze: world.walk.maze, origin: DepthEye.origin(gaze), facing: gaze.facing)
+      maze: world.walk.maze, origin: DepthEye.origin(look.gaze), facing: look.gaze.facing)
     let hits = DepthCaster.columns(cast, count: canvas.width)
     let distances = draw(hits, height: height, into: &cells)
     edges(hits, height: height, into: &cells)
@@ -170,6 +170,9 @@ struct DepthScene {
   }
 
   private func wonder(_ hits: [DepthHit], height: Int, into cells: inout [Cell]) {
+    if look.dug != nil {
+      return
+    }
     guard let cap = DeadEnd.cap(world), let column = capColumn(hits, cap) else {
       return
     }
@@ -220,23 +223,23 @@ struct DepthScene {
   }
 
   private func band(_ distance: Double, viewHeight: Int) -> DepthPlane {
-    DepthPlane.across(distance, viewHeight: viewHeight, horizon: gaze.horizon)
+    DepthPlane.across(distance, viewHeight: viewHeight, horizon: look.gaze.horizon)
   }
 
   private func sample(column: Int, row: Int, viewHeight: Int) -> CellPoint? {
-    let split = Double(viewHeight) / 2 - Double(gaze.horizon)
+    let split = Double(viewHeight) / 2 - Double(look.gaze.horizon)
     let horizon = min(max(split, 0), Double(viewHeight))
     let below = Double(row) - horizon
     if below <= 0 {
       return nil
     }
-    let heading = DepthCaster.aim(gaze.facing)
+    let heading = DepthCaster.aim(look.gaze.facing)
     let skew = DepthCaster.plane(heading)
     let offset = DepthCaster.camera(column, count: canvas.width)
     let dirX = heading.x + skew.x * offset
     let dirY = heading.y + skew.y * offset
     let distance = horizon / below
-    let origin = DepthEye.origin(gaze)
+    let origin = DepthEye.origin(look.gaze)
     let worldX = origin.x + distance * dirX
     let worldY = origin.y + distance * dirY
     return CellPoint(x: Int(worldX.rounded(.down)), y: Int(worldY.rounded(.down)))
@@ -273,15 +276,18 @@ struct DepthScene {
   }
 
   private func chest(_ fixture: FloorFixture) -> Mark? {
+    if world.walk.maze.tile(at: fixture.point) == .wall {
+      return nil
+    }
     switch fixture.kind {
     case .lake:
-      nil
+      return nil
     case .chest:
-      sealed(fixture)
+      return sealed(fixture)
     case .pit:
-      armed(fixture)
+      return armed(fixture)
     case .warp:
-      via(fixture)
+      return via(fixture)
     }
   }
 
@@ -315,6 +321,9 @@ struct DepthScene {
   }
 
   private func prowler(_ beast: FloorProwler) -> Mark? {
+    if world.walk.maze.tile(at: beast.point) == .wall {
+      return nil
+    }
     switch beast.mood {
     case .gone:
       return nil
@@ -328,10 +337,10 @@ struct DepthScene {
   }
 
   private func cast(_ point: CellPoint, viewHeight: Int) -> CastPoint? {
-    let origin = DepthEye.origin(gaze)
+    let origin = DepthEye.origin(look.gaze)
     let dx = Double(point.x) + 0.5 - origin.x
     let dy = Double(point.y) + 0.5 - origin.y
-    let heading = DepthCaster.aim(gaze.facing)
+    let heading = DepthCaster.aim(look.gaze.facing)
     let skew = DepthCaster.plane(heading)
     let det = skew.x * heading.y - heading.x * skew.y
     if det == 0 {
@@ -355,7 +364,7 @@ struct DepthScene {
     if stamp.cast.distance >= distances[stamp.column] {
       return
     }
-    let raised = (stamp.viewHeight - stamp.cast.size) / 2 - gaze.horizon
+    let raised = (stamp.viewHeight - stamp.cast.size) / 2 - look.gaze.horizon
     let top = min(max(raised, 0), stamp.viewHeight)
     let bottom = min(max(raised + stamp.cast.size - 1, -1), stamp.viewHeight - 1)
     var row = top
