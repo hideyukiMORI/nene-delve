@@ -2,7 +2,7 @@ import NeNeDelveCore
 
 /// 疑似 3D の右上に置く近景。正面が上、右が右手である。
 enum DepthChart {
-  static let reach = 2
+  static let reach = 3
 
   static func side(fitting width: Int, height: Int) -> Int {
     let room = min(width, height, reach * 2 + 1)
