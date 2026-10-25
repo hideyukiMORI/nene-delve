@@ -8,17 +8,19 @@ struct FramePainterTests {
     let world = opened()
     let grid = FramePainter.paint(
       world: world, clock: sampleClock(), look: flat(), canvas: canvas(for: world))
-    let top = line(grid, row: 0)
-    let belt = line(grid, row: 1)
-    let foot = line(grid, row: 2)
-    let shown = top + belt + foot
+    let shown = (0..<ScreenText.hudRows).map { line(grid, row: $0) }.joined()
     #expect(shown.contains("B1F"))
+    #expect(shown.contains("LV"))
+    #expect(shown.contains("HP"))
+    #expect(shown.contains("MP"))
+    #expect(shown.contains("EXP"))
     #expect(shown.contains("01:01:01"))
     #expect(shown.contains("00:00:05"))
-    #expect(shown.contains("2026-10-24 12:40:00"))
+    #expect(shown.contains("12:40:00"))
     #expect(shown.contains("(9)"))
     #expect(shown.contains("NEON GRID"))
     #expect(shown.contains("2D"))
+    #expect(shown.contains(">>"))
     #expect(shown.contains("/"))
     #expect(shown.contains("="))
     #expect(!shown.contains("SEED:"))
@@ -28,6 +30,15 @@ struct FramePainterTests {
     #expect(glyph(grid, point: world.walk.explorer.position) == ScreenText.runner)
     #expect(glyph(grid, point: world.walk.maze.stairs) == ScreenText.stairs)
     #expect(grid.cell(column: 0, row: ScreenText.hudRows).glyph == ScreenText.joint)
+  }
+
+  @Test func anArmedPitShowsACaret() {
+    let maze = rectangle()
+    let pit = CellPoint(x: 4, y: 4)
+    let grid = FramePainter.paint(
+      world: furnished(maze, chest: pit, phase: .sealed, kind: .pit),
+      clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    #expect(glyph(grid, point: pit) == ScreenText.pit)
   }
 
   @Test func aStepLeavesATrailOnTheFloor() {

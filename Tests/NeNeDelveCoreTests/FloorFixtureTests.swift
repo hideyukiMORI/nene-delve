@@ -27,6 +27,8 @@ struct FloorFixtureTests {
         #expect(fixture.phase == .sealed)
       case .lake:
         #expect(fixture.phase == .open)
+      case .pit:
+        #expect(fixture.phase == .sealed)
       }
     }
     #expect(chests >= 1)
@@ -85,26 +87,28 @@ struct FloorFixtureTests {
         continue
       }
       withBeast += 1
-      #expect(beasts.count == 1)
-      let beast = beasts[0]
-      #expect(world.walk.maze.tile(at: beast.point) == .floor)
-      #expect(beast.point != world.walk.maze.start)
-      #expect(beast.point != world.walk.maze.stairs)
-      #expect(!world.fixtures.lake(at: beast.point))
-      #expect(!world.fixtures.sealed(at: beast.point))
-      switch beast.mood {
-      case .blink:
-        break
-      case .fight, .flee, .gone:
-        Issue.record("a new prowler should blink")
-      }
-      if beast.chases {
-        chases += 1
-      } else {
-        stands += 1
+      #expect(beasts.count >= 1)
+      #expect(beasts.count <= 2)
+      for beast in beasts {
+        #expect(world.walk.maze.tile(at: beast.point) == .floor)
+        #expect(beast.point != world.walk.maze.start)
+        #expect(beast.point != world.walk.maze.stairs)
+        #expect(!world.fixtures.lake(at: beast.point))
+        #expect(!world.fixtures.sealed(at: beast.point))
+        switch beast.mood {
+        case .blink:
+          break
+        case .fight, .flee, .gone:
+          Issue.record("a new prowler should blink")
+        }
+        if beast.chases {
+          chases += 1
+        } else {
+          stands += 1
+        }
       }
     }
-    #expect(withBeast > 0)
+    #expect(withBeast > without)
     #expect(without > 0)
     #expect(chases > 0)
     #expect(stands > 0)
@@ -197,6 +201,34 @@ struct FloorFixtureTests {
     #expect(field.entered(CellPoint(x: 0, y: 0)).wade == FloorFixture.wadeSpan)
   }
 
+  @Test func someFloorsHaveAPitAwayFromTheRest() {
+    var withPit = 0
+    var without = 0
+    for raw in 1...48 {
+      guard let world = opened(UInt64(raw), span: GridSpan(width: 41, height: 21)) else {
+        Issue.record("expected a world")
+        return
+      }
+      let pits = pitPoints(world)
+      if pits.isEmpty {
+        without += 1
+        continue
+      }
+      withPit += 1
+      #expect(pits.count == 1)
+      let pit = pits[0]
+      #expect(world.fixtures.pit(at: pit))
+      #expect(!world.fixtures.lake(at: pit))
+      #expect(!world.fixtures.sealed(at: pit))
+      #expect(world.walk.maze.tile(at: pit) == .floor)
+      for beast in world.fixtures.prowlers {
+        #expect(beast.point != pit)
+      }
+    }
+    #expect(withPit > 0)
+    #expect(without > 0)
+  }
+
   @Test func aTinyFloorStaysEmpty() {
     guard let world = opened(1, span: GridSpan(width: 5, height: 5)) else {
       Issue.record("expected a world")
@@ -220,7 +252,7 @@ struct FloorFixtureTests {
         world = next
       case .descended(let next):
         #expect(next.walk.explorer.position == next.walk.maze.stairs)
-        #expect(allOpen(next.fixtures))
+        #expect(chestsAreOpen(next.fixtures))
         return
       case .stuck:
         Issue.record("chests left the runner stuck")
@@ -280,13 +312,26 @@ struct FloorFixtureTests {
     return nil
   }
 
+  private func pitPoints(_ world: FloorWorld) -> [CellPoint] {
+    var points: [CellPoint] = []
+    for fixture in world.fixtures.fixtures {
+      switch fixture.kind {
+      case .pit:
+        points.append(fixture.point)
+      case .chest, .lake:
+        break
+      }
+    }
+    return points
+  }
+
   private func lakePoints(_ world: FloorWorld) -> [CellPoint] {
     var points: [CellPoint] = []
     for fixture in world.fixtures.fixtures {
       switch fixture.kind {
       case .lake:
         points.append(fixture.point)
-      case .chest:
+      case .chest, .pit:
         break
       }
     }
@@ -324,13 +369,18 @@ struct FloorFixtureTests {
       && !lakes.contains(point)
   }
 
-  private func allOpen(_ field: FloorFixtureField) -> Bool {
+  private func chestsAreOpen(_ field: FloorFixtureField) -> Bool {
     for fixture in field.fixtures {
-      switch fixture.phase {
-      case .open:
+      switch fixture.kind {
+      case .chest:
+        switch fixture.phase {
+        case .open:
+          break
+        case .sealed, .bursting:
+          return false
+        }
+      case .lake, .pit:
         break
-      case .sealed, .bursting:
-        return false
       }
     }
     return true

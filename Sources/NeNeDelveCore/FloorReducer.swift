@@ -19,23 +19,13 @@ public enum FloorReducer {
       return .stuck
     }
     if world.fixtures.burstMark() != nil {
-      let aged = advanced(
-        world, explorer: world.walk.explorer, rng: world.walk.rng,
-        fixtures: world.fixtures.ageBurst()
-      )
-      return .running(aged)
+      return .running(still(world, fixtures: world.fixtures.ageBurst()))
     }
     if let paused = world.fixtures.pausing() {
-      let held = advanced(
-        world, explorer: world.walk.explorer, rng: world.walk.rng, fixtures: paused)
-      return .running(held)
+      return .running(still(world, fixtures: paused))
     }
-    if let acting = world.fixtures.performing(
-      in: world.walk.maze, runner: world.walk.explorer.position)
-    {
-      let held = advanced(
-        world, explorer: world.walk.explorer, rng: world.walk.rng, fixtures: acting)
-      return .running(held)
+    if world.fixtures.hold > 0 {
+      return .running(bout(world))
     }
     switch world.aim {
     case .explore:
@@ -52,14 +42,15 @@ public enum FloorReducer {
     case .tooSmall:
       return .stuck
     case .maze(let maze):
-      let next = makeWorld(
-        launchSeed: world.course.launchSeed,
-        floor: floor,
-        maze: maze,
-        pace: world.course.pace
-      )
-      return .ready(next)
+      return .ready(descended(world, floor: floor, maze: maze))
     }
+  }
+
+  private struct Step {
+    let walk: FloorWalk
+    let fixtures: FloorFixtureField
+    let delver: Delver
+    let aim: WalkAim
   }
 
   private static func explore(_ world: FloorWorld) -> FloorTick {
@@ -72,7 +63,7 @@ public enum FloorReducer {
     case .moved(let explorer):
       return moved(world, explorer: explorer, rng: rng, aim: .explore)
     case .arrived(let explorer):
-      return .descended(advanced(world, explorer: explorer, rng: rng, fixtures: world.fixtures))
+      return .descended(arrived(world, explorer: explorer, rng: rng))
     case .stuck:
       return recover(world)
     }
@@ -91,8 +82,7 @@ public enum FloorReducer {
     case .moved(let explorer):
       return moved(world, explorer: explorer, rng: world.walk.rng, aim: .recover)
     case .arrived(let explorer):
-      return .descended(
-        advanced(world, explorer: explorer, rng: world.walk.rng, fixtures: world.fixtures))
+      return .descended(arrived(world, explorer: explorer, rng: world.walk.rng))
     case .stuck:
       return .stuck
     }
@@ -101,46 +91,85 @@ public enum FloorReducer {
   private static func moved(
     _ world: FloorWorld, explorer: Explorer, rng: SplitMix64, aim: WalkAim
   ) -> FloorTick {
+    let delver = DelverMoment.notice(world, explorer: explorer)
+    let fixtures = aftermath(world, explorer: explorer)
+    let step = Step(
+      walk: walked(world, explorer: explorer, rng: rng), fixtures: fixtures, delver: delver,
+      aim: aim
+    )
+    return .running(commit(world, step))
+  }
+
+  private static func aftermath(_ world: FloorWorld, explorer: Explorer) -> FloorFixtureField {
+    let place = explorer.position
     let opened =
-      world.fixtures.sealed(at: explorer.position)
-      ? world.fixtures.beginBurst(at: explorer.position)
-      : world.fixtures
-    let fixtures = opened.entered(explorer.position)
-      .hunted(explorer.position, in: world.walk.maze)
-      .encountered(explorer.position)
-    let stepped = advanced(world, explorer: explorer, rng: rng, fixtures: fixtures)
-    return .running(retarget(stepped, aim: aim))
+      world.fixtures.sealed(at: place) ? world.fixtures.beginBurst(at: place) : world.fixtures
+    let sprung = world.fixtures.pit(at: place) ? opened.spring(at: place) : opened
+    return sprung.entered(place).hunted(place, in: world.walk.maze).encountered(place)
+  }
+
+  private static func arrived(_ world: FloorWorld, explorer: Explorer, rng: SplitMix64)
+    -> FloorWorld
+  {
+    let step = Step(
+      walk: walked(world, explorer: explorer, rng: rng), fixtures: world.fixtures,
+      delver: world.course.delver.aged(), aim: world.aim)
+    return commit(world, step)
+  }
+
+  private static func still(_ world: FloorWorld, fixtures: FloorFixtureField) -> FloorWorld {
+    let step = Step(
+      walk: walked(world, explorer: world.walk.explorer, rng: world.walk.rng), fixtures: fixtures,
+      delver: world.course.delver.aged(), aim: world.aim)
+    return commit(world, step)
+  }
+
+  private static func bout(_ world: FloorWorld) -> FloorWorld {
+    let outcome = DelverBout.step(world)
+    let step = Step(
+      walk: walked(world, explorer: world.walk.explorer, rng: world.walk.rng),
+      fixtures: outcome.field, delver: outcome.delver, aim: world.aim)
+    return commit(world, step)
+  }
+
+  private static func commit(_ world: FloorWorld, _ step: Step) -> FloorWorld {
+    FloorWorld(
+      course: world.course.with(delver: step.delver.noted()), walk: step.walk,
+      fixtures: step.fixtures,
+      aim: step.aim)
+  }
+
+  private static func walked(_ world: FloorWorld, explorer: Explorer, rng: SplitMix64) -> FloorWalk
+  {
+    FloorWalk(
+      maze: world.walk.maze, explorer: explorer, rng: rng, steps: world.walk.steps + 1)
   }
 
   private static func makeWorld(launchSeed: Seed, floor: FloorIndex, maze: Maze, pace: StepPace)
     -> FloorWorld
   {
     let floorSeed = launchSeed.forFloor(floor)
-    let course = FloorCourse(launchSeed: launchSeed, floor: floor, pace: pace)
-    let walk = FloorWalk(
-      maze: maze,
-      explorer: Explorer.begin(maze),
-      rng: SplitMix64(seed: floorSeed),
-      steps: 0
-    )
-    let fixtures = FloorFixtureField.placed(in: maze, seed: floorSeed)
+    let explorer = Explorer.begin(maze)
+    let pin = DelverLine.QuipPin(seed: launchSeed, floor: floor, place: explorer.position)
+    let course = FloorCourse(
+      launchSeed: launchSeed, floor: floor, pace: pace, delver: Delver.fresh(pin))
+    let walk = FloorWalk(maze: maze, explorer: explorer, rng: SplitMix64(seed: floorSeed), steps: 0)
+    let fixtures = FloorFixtureField.placed(in: maze, seed: floorSeed, depth: floor.depth)
     return FloorWorld(course: course, walk: walk, fixtures: fixtures, aim: .explore)
   }
 
-  private static func advanced(
-    _ world: FloorWorld, explorer: Explorer, rng: SplitMix64, fixtures: FloorFixtureField
-  ) -> FloorWorld {
-    let walk = FloorWalk(
-      maze: world.walk.maze,
-      explorer: explorer,
-      rng: rng,
-      steps: world.walk.steps + 1
-    )
-    return FloorWorld(course: world.course, walk: walk, fixtures: fixtures, aim: world.aim)
-  }
-
-  private static func retarget(_ world: FloorWorld, aim: WalkAim) -> FloorWorld {
-    FloorWorld(course: world.course, walk: world.walk, fixtures: world.fixtures, aim: aim)
+  private static func descended(_ world: FloorWorld, floor: FloorIndex, maze: Maze) -> FloorWorld {
+    let born = makeWorld(
+      launchSeed: world.course.launchSeed, floor: floor, maze: maze, pace: world.course.pace)
+    let pin = DelverLine.QuipPin(
+      seed: world.course.launchSeed, floor: floor, place: born.walk.explorer.position)
+    let delver = world.course.delver.carrying(
+      vitals: world.course.delver.vitals.rested(),
+      line: DelverLine.say(.descend, pin: pin, note: floor.depth)
+    ).noted()
+    return FloorWorld(
+      course: born.course.with(delver: delver), walk: born.walk, fixtures: born.fixtures,
+      aim: born.aim)
   }
 
   private static func carved(seed: Seed, span: GridSpan) -> MazePlan {

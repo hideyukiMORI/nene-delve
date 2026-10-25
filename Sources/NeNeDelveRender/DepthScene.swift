@@ -238,6 +238,17 @@ struct DepthScene {
       nil
     case .chest:
       sealed(fixture)
+    case .pit:
+      armed(fixture)
+    }
+  }
+
+  private func armed(_ fixture: FloorFixture) -> Mark? {
+    switch fixture.phase {
+    case .sealed:
+      Mark(point: fixture.point, glyph: ScreenText.pit, foreground: palette.accent.mark.threat)
+    case .bursting, .open:
+      nil
     }
   }
 

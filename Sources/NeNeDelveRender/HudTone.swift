@@ -1,24 +1,43 @@
-/// HUD の字色。地はテーマ背景。暗い字は地に対して 4.5:1 を割らない。
+/// HUD の字色。地はテーマ背景。どの段も地に対して 4.5 を割らない。
 enum HudTone {
-  struct Mark {
-    let glyph: Character
-    let row: Int
-    let column: Int
-    let line: String
+  static func ink(_ role: HudRole, palette: ThemePalette) -> Rgb {
+    let ground = palette.ink.background
+    let hud = palette.accent.hud
+    return switch role {
+    case .value:
+      hud
+    case .flash:
+      readable(palette.ink.floor, on: ground, else: hud)
+    case .alarm:
+      readable(palette.accent.mark.threat, on: ground, else: hud)
+    case .label:
+      shade(hud, on: ground, percent: 80)
+    case .firm:
+      shade(hud, on: ground, percent: 65)
+    case .mid:
+      shade(hud, on: ground, percent: 50)
+    case .soft:
+      shade(hud, on: ground, percent: 40)
+    case .faint:
+      shade(hud, on: ground, percent: 25)
+    case .alarmSoft:
+      shade(palette.accent.mark.threat, on: ground, percent: 70)
+    }
   }
 
-  static func foreground(_ mark: Mark, palette: ThemePalette) -> Rgb {
-    if quiet(mark) {
-      return softened(palette.accent.hud, on: palette.ink.background)
+  private static func readable(_ ink: Rgb, on ground: Rgb, else fallback: Rgb) -> Rgb {
+    if contrast(ink, ground) >= 4.5 {
+      return ink
     }
-    return palette.accent.hud
+    return fallback
   }
 
-  private static func quiet(_ mark: Mark) -> Bool {
-    if mark.glyph.isNumber || mark.glyph.isLetter {
-      return false
+  private static func shade(_ ink: Rgb, on ground: Rgb, percent: Int) -> Rgb {
+    let sample = ink.dimmed(percent)
+    if contrast(sample, ground) >= 4.5 {
+      return sample
     }
-    return true
+    return softened(ink, on: ground)
   }
 
   private static func softened(_ ink: Rgb, on ground: Rgb) -> Rgb {
@@ -47,12 +66,12 @@ enum HudTone {
     return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue)
   }
 
+  /// u^3 は実測のガンマ 2.4 より明るい。ここを通る 4.5 は実測でも 4.5 を割らない。
   private static func channel(_ value: Int) -> Double {
     let unit = Double(value) / 255
     if unit <= 0.04045 {
       return unit / 12.92
     }
-    // u^3 は sRGB の 2.4 乗より暗い。ここで 4.5 を超える色は、実測の比でも 4.5 を超える。
     return unit * unit * unit
   }
 }

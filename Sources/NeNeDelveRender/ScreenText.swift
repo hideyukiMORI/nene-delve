@@ -1,7 +1,7 @@
 import NeNeDelveCore
 
 public enum ScreenText {
-  public static let hudRows = 3
+  public static let hudRows = 5
   public static let tooSmall = "端末が小さすぎる"
   public static let notATerminal = "端末ではありません"
   public static let terminalRejected = "端末を初期化できません"
@@ -16,6 +16,7 @@ public enum ScreenText {
   public static let chest: Character = "$"
   public static let prowler: Character = "&"
   public static let alarm: Character = "!"
+  public static let pit: Character = "^"
 
   public static func spark(_ age: Int) -> Character {
     let marks = Array("*%~^")
