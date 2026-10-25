@@ -74,7 +74,8 @@ enum DepthCaster {
     var cursor = cursor(from, dirX: dirX, dirY: dirY, stride: pace)
     let found = walk(maze, cursor: &cursor, stride: pace)
     let distance = found.vertical ? cursor.sideX - pace.deltaX : cursor.sideY - pace.deltaY
-    return DepthHit(distance: max(distance, 0.05), tile: found.tile, vertical: found.vertical)
+    return DepthHit(
+      distance: max(distance, 0.05), tile: found.tile, vertical: found.vertical, point: found.point)
   }
 
   private static func stride(_ dirX: Double, _ dirY: Double) -> Stride {
@@ -111,11 +112,14 @@ enum DepthCaster {
       vertical = step(&cursor, stride)
       if halted(maze, cursor.mapX, mapY: cursor.mapY) {
         return DepthHit(
-          distance: 0, tile: tile(maze, cursor.mapX, mapY: cursor.mapY), vertical: vertical)
+          distance: 0, tile: tile(maze, cursor.mapX, mapY: cursor.mapY), vertical: vertical,
+          point: CellPoint(x: cursor.mapX, y: cursor.mapY))
       }
       left -= 1
     }
-    return DepthHit(distance: 0, tile: .wall, vertical: vertical)
+    return DepthHit(
+      distance: 0, tile: .wall, vertical: vertical, point: CellPoint(x: cursor.mapX, y: cursor.mapY)
+    )
   }
 
   private static func step(_ cursor: inout Cursor, _ stride: Stride) -> Bool {

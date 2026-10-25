@@ -14,6 +14,9 @@ public struct StepPace: Equatable, Sendable {
   /// 部屋の中の一歩。階の歩調には使わず、それより長い待ちは縮めない。
   public static let linger = StepPace(milliseconds: 112)
 
+  /// 行き止まりで ? を読む長さ。旋回と同じ 167ms で、階の歩調には使わない。
+  public static let wonder = StepPace(milliseconds: 167)
+
   /// 広い階ほど短くする。だいたい数十秒で階を歩き切る間隔に寄せる。
   public static func forSpan(_ span: GridSpan) -> StepPace {
     let steps = max(span.count, 1)
