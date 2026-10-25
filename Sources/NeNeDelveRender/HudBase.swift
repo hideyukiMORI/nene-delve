@@ -11,8 +11,8 @@ enum HudBase {
   private static func head(_ read: HudRead, aim: Bool) -> [HudCell]? {
     let left = HudJoin.pieces(
       [
-        HudWords.piece(read, .floor), HudWords.piece(read, .facing), HudWords.piece(read, .view),
-        HudWords.piece(read, .level),
+        HudWords.piece(read, .floor), HudWords.piece(read, .record),
+        HudWords.piece(read, .facing), HudWords.piece(read, .view), HudWords.piece(read, .level),
       ], gap: 2)
     let right = HudJoin.pieces(
       [HudWords.piece(read, .place), times(read), HudWords.piece(read, .clock)], gap: 3)

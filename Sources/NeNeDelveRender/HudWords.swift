@@ -57,6 +57,8 @@ enum HudWords {
       ScreenText.themeLine(look.theme)
     case .floor:
       ScreenText.floorLabel(read.brief.floor)
+    case .record:
+      ScreenText.recordLabel(read.brief.delver.deepest)
     case .seed:
       "(" + String(clock.seed.raw) + ")"
     case .vitals:
@@ -72,7 +74,7 @@ enum HudWords {
       levelRole(read)
     case .view, .stage, .theme, .seed, .date:
       .label
-    case .floor, .facing, .place, .elapsed, .clock, .vitals:
+    case .floor, .record, .facing, .place, .elapsed, .clock, .vitals:
       .value
     }
   }

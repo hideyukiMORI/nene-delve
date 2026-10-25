@@ -218,7 +218,7 @@ public enum FloorReducer {
     let spoken = world.course.delver.carrying(
       vitals: world.course.delver.vitals.rested(),
       line: DelverLine.say(moment, pin: pin, note: floor.depth)
-    )
+    ).reaching(max(world.course.floor.depth, floor.depth))
     let marked = moment == .ascend ? spoken.remembering(world.course.floor.depth) : spoken
     return FloorWorld(
       course: born.course.with(delver: marked.noted()), walk: born.walk, fixtures: born.fixtures,
