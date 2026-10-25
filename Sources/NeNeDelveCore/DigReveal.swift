@@ -37,6 +37,6 @@ public enum DigReveal {
   }
 
   private static func plate(_ maze: Maze) -> MazePlate {
-    MazePlate(ends: maze.ends, dug: maze.dug)
+    MazePlate(ends: maze.ends, dug: maze.dug, veil: maze.veil)
   }
 }

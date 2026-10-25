@@ -12,4 +12,9 @@ public struct FloorWorld: Equatable, Sendable {
     self.fixtures = fixtures
     self.aim = aim
   }
+
+  func replacing(maze: Maze) -> FloorWorld {
+    let walk = FloorWalk(maze: maze, explorer: walk.explorer, rng: walk.rng, steps: walk.steps)
+    return FloorWorld(course: course, walk: walk, fixtures: fixtures, aim: aim)
+  }
 }

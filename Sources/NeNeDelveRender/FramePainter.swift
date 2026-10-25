@@ -8,7 +8,7 @@ public enum FramePainter {
       return CellGrid(span: canvas, cells: [])
     }
     let palette = ThemePalette.palette(look.theme)
-    let shown = revealed(world, frame: look.dug)
+    let shown = DarkFloor.masked(revealed(world, frame: look.dug))
     var job = Job(
       palette: palette, canvas: canvas,
       cells: Array(repeating: palette.blank, count: canvas.count), digging: look.dug != nil)

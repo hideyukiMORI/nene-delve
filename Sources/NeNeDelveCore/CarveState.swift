@@ -23,12 +23,12 @@ struct CarveState {
     }
   }
 
-  func maze() -> Maze {
+  func maze(kind: MazeKind = .filledGrid) -> Maze {
     var finished = tiles
     finished[span.offset(last)] = .stairs
     let ends = MazeEnds(start: CellPoint(x: 1, y: 1), stairs: last)
     let plate = MazePlate(ends: ends, dug: dug)
-    return Maze(span: span, tiles: finished, plate: plate, kind: .filledGrid)
+    return Maze(span: span, tiles: finished, plate: plate, kind: kind)
   }
 
   private mutating func carve(_ room: CellPoint) {

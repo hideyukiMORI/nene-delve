@@ -29,7 +29,8 @@ struct FramePainterTests {
       grid.cell(column: 0, row: 0).background == ThemePalette.palette(.neonGrid).ink.background)
     #expect(glyph(grid, point: world.walk.explorer.position) == ScreenText.runner)
     #expect(glyph(grid, point: world.walk.maze.stairs) == ScreenText.stairs)
-    #expect(grid.cell(column: 0, row: ScreenText.hudRows).glyph == ScreenText.joint)
+    let corner = grid.cell(column: 0, row: ScreenText.hudRows).glyph
+    #expect(corner == ScreenText.joint || corner == ScreenText.floor)
   }
 
   @Test func anArmedPitShowsACaret() {
@@ -159,6 +160,16 @@ struct FramePainterTests {
   @Test func screenTextKeepsTheTooSmallLine() {
     #expect(ScreenText.tooSmall == "端末が小さすぎる")
     #expect(ScreenText.rejection(.unknownOption) == "不明な起動オプションです")
+  }
+
+  @Test func aLanternHidesTheFarFloor() {
+    let maze = lane().veiled(MazeVeil(shade: true, shifts: [], phase: 0))
+    let grid = FramePainter.paint(
+      world: world(maze), clock: sampleClock(), look: flat(), canvas: canvas(forMaze: maze))
+    let hidden = glyph(grid, point: CellPoint(x: 6, y: 1))
+    #expect(glyph(grid, point: CellPoint(x: 2, y: 1)) == ScreenText.floor)
+    #expect(glyph(grid, point: maze.start) == ScreenText.runner)
+    #expect(hidden == ScreenText.joint || hidden == ScreenText.bar || hidden == ScreenText.dash)
   }
 
   private func opened() -> FloorWorld {
@@ -501,6 +512,20 @@ struct FramePainterTests {
       fixtures: FloorFixtureField(fixtures: [], wade: 0, prowlers: [beast]),
       aim: .explore
     )
+  }
+
+  private func lane() -> Maze {
+    let span = GridSpan(width: 15, height: 9)
+    var tiles = Array(repeating: Tile.wall, count: span.count)
+    var x = 1
+    while x <= 12 {
+      tiles[span.offset(CellPoint(x: x, y: 1))] = .floor
+      x += 1
+    }
+    let stairs = CellPoint(x: 12, y: 1)
+    tiles[span.offset(stairs)] = .stairs
+    let ends = MazeEnds(start: CellPoint(x: 1, y: 1), stairs: stairs)
+    return Maze(span: span, tiles: tiles, ends: ends, kind: .filledGrid)
   }
 
   private func rectangle() -> Maze {

@@ -45,21 +45,17 @@ struct RoomMazeTests {
     #expect(openCount(maze) > 40)
   }
 
-  @Test func seedsPickBothKinds() {
-    var filled = false
-    var rooms = false
+  @Test func seedsPickEveryKind() {
+    var seen: [MazeKind] = []
     var raw = 0
-    while raw < 40 {
-      switch MazeKind.chosen(Seed(raw: UInt64(raw))) {
-      case .filledGrid:
-        filled = true
-      case .rooms:
-        rooms = true
+    while raw < 256 {
+      let kind = MazeKind.chosen(Seed(raw: UInt64(raw)))
+      if !seen.contains(kind) {
+        seen.append(kind)
       }
       raw += 1
     }
-    #expect(filled)
-    #expect(rooms)
+    #expect(seen.count == MazeKind.order.count)
   }
 
   private func openCount(_ maze: Maze) -> Int {
