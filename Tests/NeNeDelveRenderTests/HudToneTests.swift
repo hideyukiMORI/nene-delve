@@ -3,14 +3,19 @@ import Testing
 @testable import NeNeDelveRender
 
 struct HudToneTests {
-  @Test func quietInkStaysReadableOnEveryTheme() {
+  @Test func everyRoleStaysReadableOnEveryTheme() {
     for name in themes {
       let palette = ThemePalette.palette(name)
-      let frame = HudTone.foreground(mark("=", line: "/==[ B1F ]==/"), palette: palette)
-      let digit = HudTone.foreground(mark("1", line: "/==[ B1F ]==/"), palette: palette)
       let ground = palette.ink.background
-      #expect(contrast(frame, ground) >= 4.5)
-      #expect(contrast(digit, ground) > contrast(frame, ground))
+      let value = HudTone.ink(.value, palette: palette)
+      let faint = HudTone.ink(.faint, palette: palette)
+      let alarm = HudTone.ink(.alarm, palette: palette)
+      #expect(contrast(value, ground) >= 4.5)
+      #expect(contrast(faint, ground) >= 4.5)
+      #expect(contrast(alarm, ground) >= 4.5)
+      #expect(contrast(value, ground) > contrast(faint, ground))
+      #expect(contrast(HudTone.ink(.label, palette: palette), ground) >= 4.5)
+      #expect(contrast(HudTone.ink(.alarmSoft, palette: palette), ground) >= 4.5)
     }
   }
 
@@ -19,10 +24,6 @@ struct HudToneTests {
       .neonGrid, .phosphor, .amberTerm, .iceCore, .synthwave, .deepSea, .void, .toxic, .aurora,
       .carbon,
     ]
-  }
-
-  private func mark(_ glyph: Character, line: String) -> HudTone.Mark {
-    HudTone.Mark(glyph: glyph, row: 0, column: 0, line: line)
   }
 
   private func contrast(_ ink: Rgb, _ ground: Rgb) -> Double {

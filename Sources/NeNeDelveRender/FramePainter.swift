@@ -10,11 +10,14 @@ public enum FramePainter {
     let palette = ThemePalette.palette(look.theme)
     var job = Job(
       palette: palette, canvas: canvas, cells: Array(repeating: palette.blank, count: canvas.count))
-    let hud = HudLayout.make(
-      clock: clock, floor: world.course.floor, look: look, width: canvas.width)
-    job.writeLine(hud.first, row: 0)
-    job.writeLine(hud.second, row: 1)
-    job.writeLine(hud.third, row: 2)
+    let brief = HudBrief(
+      clock: clock, floor: world.course.floor, look: look, delver: world.course.delver)
+    let hud = HudLayout.make(brief, width: canvas.width, step: world.walk.steps)
+    var hudRow = 0
+    while hudRow < hud.cells.count && hudRow < ScreenText.hudRows {
+      job.writeHud(hud.cells[hudRow], row: hudRow)
+      hudRow += 1
+    }
     switch look.view {
     case .plan:
       job.writeMaze(world)
@@ -30,31 +33,28 @@ public enum FramePainter {
     let canvas: GridSpan
     var cells: [Cell]
 
-    mutating func writeLine(_ text: String, row: Int) {
+    mutating func writeHud(_ cells: [HudCell], row: Int) {
       if row < 0 || row >= canvas.height {
         return
       }
       var column = 0
       while column < canvas.width {
-        put(hudCell(" ", row: row, column: column, line: text), at: CellPoint(x: column, y: row))
+        put(hudCell(HudCell.gap), at: CellPoint(x: column, y: row))
         column += 1
       }
       column = 0
-      for character in text {
+      for cell in cells {
         if column >= canvas.width {
           return
         }
-        put(
-          hudCell(character, row: row, column: column, line: text), at: CellPoint(x: column, y: row)
-        )
+        put(hudCell(cell), at: CellPoint(x: column, y: row))
         column += 1
       }
     }
 
-    func hudCell(_ glyph: Character, row: Int, column: Int, line: String) -> Cell {
-      let mark = HudTone.Mark(glyph: glyph, row: row, column: column, line: line)
-      return Cell(
-        glyph: glyph, foreground: HudTone.foreground(mark, palette: palette),
+    func hudCell(_ cell: HudCell) -> Cell {
+      Cell(
+        glyph: cell.glyph, foreground: HudTone.ink(cell.role, palette: palette),
         background: palette.ink.background)
     }
 
@@ -201,6 +201,9 @@ public enum FramePainter {
     }
 
     func floor(_ world: FloorWorld, point: CellPoint) -> Cell {
+      if let trap = pit(world, point) {
+        return trap
+      }
       if world.fixtures.sealed(at: point) {
         return Cell(
           glyph: ScreenText.chest, foreground: palette.accent.mark.loot,
@@ -214,6 +217,15 @@ public enum FramePainter {
       }
       let glyph = visited(world, point) ? ScreenText.trail : ScreenText.floor
       return Cell(glyph: glyph, foreground: palette.ink.floor, background: palette.ink.background)
+    }
+
+    func pit(_ world: FloorWorld, _ point: CellPoint) -> Cell? {
+      if !world.fixtures.pit(at: point) {
+        return nil
+      }
+      return Cell(
+        glyph: ScreenText.pit, foreground: palette.accent.mark.threat,
+        background: palette.ink.background)
     }
 
     func visited(_ world: FloorWorld, _ point: CellPoint) -> Bool {

@@ -24,7 +24,7 @@ public struct FloorFixtureField: Equatable, Sendable {
     self.prowlers = prowlers
   }
 
-  public static func placed(in maze: Maze, seed: Seed) -> FloorFixtureField {
+  public static func placed(in maze: Maze, seed: Seed, depth: Int) -> FloorFixtureField {
     let spots = candidates(maze)
     if spots.count < minimumSpots {
       return FloorFixtureField(fixtures: [], wade: 0)
@@ -33,9 +33,13 @@ public struct FloorFixtureField: Equatable, Sendable {
     let count = min(spots.count, 1 + Int(roll % 3))
     let chests = choose(spots, count: count, rng: rng)
     let water = pond(maze, spots: spots, taken: chests.used, rng: chests.rng)
-    let prowlers = lurking(spots, taken: chests.used + water.used, rng: water.rng)
+    let taken = chests.used + water.used
+    let beasts = lurking(spots, taken: taken, rng: water.rng, depth: depth)
+    let traps = pits(spots, taken: taken + beasts.used, rng: beasts.rng)
     return FloorFixtureField(
-      fixtures: chests.fixtures + water.fixtures, wade: 0, prowlers: prowlers)
+      fixtures: chests.fixtures + water.fixtures + traps.fixtures, wade: 0,
+      prowlers: beasts.prowlers
+    )
   }
 
   public var holdsSealed: Bool {
@@ -60,7 +64,24 @@ public struct FloorFixtureField: Equatable, Sendable {
         case .bursting, .open:
           return false
         }
-      case .lake:
+      case .lake, .pit:
+        return false
+      }
+    }
+    return false
+  }
+
+  public func pit(at point: CellPoint) -> Bool {
+    for fixture in fixtures where fixture.point == point {
+      switch fixture.kind {
+      case .pit:
+        switch fixture.phase {
+        case .sealed:
+          return true
+        case .bursting, .open:
+          return false
+        }
+      case .chest, .lake:
         return false
       }
     }
@@ -98,7 +119,7 @@ public struct FloorFixtureField: Equatable, Sendable {
       switch fixture.kind {
       case .lake:
         return true
-      case .chest:
+      case .chest, .pit:
         return false
       }
     }
@@ -111,7 +132,7 @@ public struct FloorFixtureField: Equatable, Sendable {
       switch fixture.kind {
       case .lake:
         points.append(fixture.point)
-      case .chest:
+      case .chest, .pit:
         break
       }
     }
@@ -193,6 +214,32 @@ public struct FloorFixtureField: Equatable, Sendable {
     return nil
   }
 
+  public func spring(at point: CellPoint) -> FloorFixtureField {
+    copied(fixtures: fixtures.map { openedPit($0, at: point) }, wade: FloorFixture.snareSpan)
+  }
+
+  public func cleared(_ foe: FloorProwler) -> FloorFixtureField {
+    var left: [FloorProwler] = []
+    for step in prowlers where step.point != foe.point {
+      left.append(step)
+    }
+    return copied(hold: 0, prowlers: left)
+  }
+
+  public func holding(_ foe: FloorProwler, span: Int) -> FloorFixtureField {
+    copied(hold: span, prowlers: [foe])
+  }
+
+  public func replacing(_ foe: FloorProwler) -> FloorFixtureField {
+    let next = prowlers.map { step in
+      if step.point == foe.point {
+        return foe
+      }
+      return step
+    }
+    return copied(prowlers: next)
+  }
+
   public func beginBurst(at point: CellPoint) -> FloorFixtureField {
     copied(fixtures: fixtures.map { retimed($0, at: point) })
   }
@@ -252,7 +299,7 @@ public struct FloorFixtureField: Equatable, Sendable {
       case .bursting, .open:
         return nil
       }
-    case .lake:
+    case .lake, .pit:
       return nil
     }
   }
@@ -265,6 +312,18 @@ public struct FloorFixtureField: Equatable, Sendable {
     case .sealed:
       return FloorFixture(point: fixture.point, kind: fixture.kind, phase: .bursting(0))
     case .bursting, .open:
+      return fixture
+    }
+  }
+
+  private func openedPit(_ fixture: FloorFixture, at point: CellPoint) -> FloorFixture {
+    if fixture.point != point {
+      return fixture
+    }
+    switch fixture.kind {
+    case .pit:
+      return FloorFixture(point: fixture.point, kind: fixture.kind, phase: .open)
+    case .chest, .lake:
       return fixture
     }
   }
@@ -348,23 +407,73 @@ public struct FloorFixtureField: Equatable, Sendable {
     return Pick(fixtures: lakes, used: water, rng: after)
   }
 
-  /// 広い階のおよそ 3 分の 1。偶数の抽選は追いかけてくる。
-  private static func lurking(_ spots: [CellPoint], taken: [CellPoint], rng: SplitMix64)
-    -> [FloorProwler]
-  {
+  private struct Lurkers {
+    let prowlers: [FloorProwler]
+    let used: [CellPoint]
+    let rng: SplitMix64
+  }
+
+  private struct Plant {
+    let beast: FloorProwler
+    let rng: SplitMix64
+  }
+
+  /// 広い階のおよそ 5 分の 4。空いていればもう 1 体。およそ 3 分の 2 は追いかけてくる。
+  private static func lurking(
+    _ spots: [CellPoint], taken: [CellPoint], rng: SplitMix64, depth: Int
+  ) -> Lurkers {
     let (roll, next) = rng.next()
-    if roll % 3 != 0 {
-      return []
+    if roll.isMultiple(of: 5) {
+      return Lurkers(prowlers: [], used: [], rng: next)
+    }
+    let open = unused(spots, taken: taken)
+    guard let first = plant(open, rng: next, depth: depth) else {
+      return Lurkers(prowlers: [], used: [], rng: next)
+    }
+    return company(open, first: first, depth: depth)
+  }
+
+  private static func company(_ open: [CellPoint], first: Plant, depth: Int) -> Lurkers {
+    let (extra, rest) = first.rng.next()
+    var prowlers = [first.beast]
+    var used = [first.beast.point]
+    if !extra.isMultiple(of: 2) {
+      return Lurkers(prowlers: prowlers, used: used, rng: rest)
+    }
+    guard let second = plant(unused(open, taken: used), rng: rest, depth: depth) else {
+      return Lurkers(prowlers: prowlers, used: used, rng: rest)
+    }
+    prowlers.append(second.beast)
+    used.append(second.beast.point)
+    return Lurkers(prowlers: prowlers, used: used, rng: second.rng)
+  }
+
+  private static func plant(_ open: [CellPoint], rng: SplitMix64, depth: Int) -> Plant? {
+    if open.isEmpty {
+      return nil
+    }
+    let (indexRoll, after) = rng.next()
+    let origin = open[Int(indexRoll % UInt64(open.count))]
+    let (chaseRoll, rest) = after.next()
+    let chases = !chaseRoll.isMultiple(of: 3)
+    let life = DelverVitals.foeLife(depth: depth, chases: chases)
+    let beast = FloorProwler(point: origin, chases: chases, mood: .blink, life: life)
+    return Plant(beast: beast, rng: rest)
+  }
+
+  private static func pits(_ spots: [CellPoint], taken: [CellPoint], rng: SplitMix64) -> Pick {
+    let (roll, next) = rng.next()
+    if roll % 4 != 0 {
+      return Pick(fixtures: [], used: [], rng: next)
     }
     let open = unused(spots, taken: taken)
     if open.isEmpty {
-      return []
+      return Pick(fixtures: [], used: [], rng: next)
     }
     let (indexRoll, after) = next.next()
     let origin = open[Int(indexRoll % UInt64(open.count))]
-    let (chaseRoll, _) = after.next()
-    let chases = chaseRoll.isMultiple(of: 2)
-    return [FloorProwler(point: origin, chases: chases, mood: .blink)]
+    let trap = FloorFixture(point: origin, kind: .pit, phase: .sealed)
+    return Pick(fixtures: [trap], used: [origin], rng: after)
   }
 
   /// つながった水面のうち、隣の水面が一番多いマスを石にする。同点は掘り始め側。

@@ -397,9 +397,19 @@ struct NeneDelveMain {
     case .tooSmall:
       return false
     case .world(let next):
-      world = next
+      world = kept(next, previous: world)
       return true
     }
+  }
+
+  private static func kept(_ rebuilt: FloorWorld, previous: FloorWorld?) -> FloorWorld {
+    guard let previous else {
+      return rebuilt
+    }
+    return FloorWorld(
+      course: rebuilt.course.with(delver: previous.course.delver), walk: rebuilt.walk,
+      fixtures: rebuilt.fixtures,
+      aim: previous.aim)
   }
 
   private static func present(
